@@ -58,3 +58,8 @@ def choosing_direction(nn,L,H):
         
         return random.choice([1,8,7])
     
+    
+
+
+theta=choosing_direction(nn,L,H) 
+theta = float(theta)
