@@ -49,10 +49,14 @@ scale_factor(inroi) = 0.3; % change this for scaling of the agent's movement
 Epsilon = 0.9;
 
 % set total number of loops
-NN = 1;
+NN = 10;
+TimeLength_record = zeros(NN,1); % record the leng of time needed
 
 % The Main Loop
 for nn = 1:NN
+
+    % display the number of realization
+    disp(num2str(nn));
 
     % delete all files from past loop
     delete input_*.csv
@@ -89,13 +93,12 @@ for nn = 1:NN
 
     % initial some variables to record value
     T_total = 0;
-    TimeLength_record = zeros(NN,1); % record the leng of time needed
 
     % update the result using the output from python
     while norm(xy_pede - Real_Target) >= R
 
         % if don't want to display
-        disp([num2str(T_total/3600),' hours']);
+%         disp([num2str(T_total/3600),' hours']);
 
         % use pyrunfile
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
