@@ -19,7 +19,7 @@ dx = Dim1/200;
 x1 = 0:dx:Dim1;
 x2 = 0:dx:Dim2;
 [X,Y] = meshgrid(x1,x2);
-board = [0,0;Dim1,0;Dim1,Dim1;0,Dim2;0,0];
+board = [0,0;Dim1,0;Dim1,Dim2;0,Dim2;0,0];
 
 % agent parameters
 V_best = 2.8; % the desired moving velocity under the best environmental condition
@@ -120,8 +120,12 @@ for nn = 1:NN
         % apply reflective boundary condition
         if ~inpolygon(xy_pede(1),xy_pede(2),board(:,1),board(:,2))
             xy_pede(xy_pede < 0) = abs(xy_pede(xy_pede < 0));
-            xy_pede(xy_pede(1) > Dim1) = 2*Dim1 - xy_pede(xy_pede(1) > Dim1);
-            xy_pede(xy_pede(2) > Dim2) = 2*Dim2 - xy_pede(xy_pede(2) > Dim2);
+            if xy_pede(1) > Dim1
+                xy_pede(1) = 2*Dim1 - xy_pede(1);
+            end
+            if xy_pede(2) > Dim2
+                xy_pede(2) = 2*Dim2 - xy_pede(2);
+            end
         end
 
         % update the moving velocity according to the env condition
@@ -183,7 +187,7 @@ if ENV
     fill(x1(:,1),x1(:,2),'b', 'FaceAlpha', 0.3,'edgecolor','none');
     fill(x2(:,1),x2(:,2),'b', 'FaceAlpha', 0.3,'edgecolor','none');
 end
-axis([0 Dim 0 Dim]);
+axis([0 Dim1 0 Dim2]);
 % set(gca,'Ydir','reverse');
 xlb = xlabel('m');
 ylb = ylabel('m');
