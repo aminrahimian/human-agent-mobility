@@ -169,5 +169,37 @@ for nn = 1:NN
     TimeLength_record(nn) = T_total/3600;
     disp(['Realization ',num2str(nn),' using ',num2str(T_total/3600),' hours']);
 end
+%% Plotting a single track
+figure(2);
+hold on
+plot(Real_Target(1),Real_Target(2),'rp','markersize',10,'MarkerFaceColor','r');
+plot(0,0,'gs','markersize',10,'MarkerFaceColor','g');
+plot(xy_pede_save(:,1),xy_pede_save(:,2),'m-','LineWidth',1.5);
+plot(xy_pede_save(end,1),xy_pede_save(end,2),'bo','markersize',10,'MarkerFaceColor','b');
+if ENV
+    load('roi.mat');
+    x1 = roi1.Position;
+    x2 = roi2.Position;
+    fill(x1(:,1),x1(:,2),'b', 'FaceAlpha', 0.3,'edgecolor','none');
+    fill(x2(:,1),x2(:,2),'b', 'FaceAlpha', 0.3,'edgecolor','none');
+end
+axis([0 Dim 0 Dim]);
+% set(gca,'Ydir','reverse');
+xlb = xlabel('m');
+ylb = ylabel('m');
+ttl = title('Random Walk');
+if ENV
+    lgd = legend('real target','agent initial location','agent path','agent current position','environmental condition',...
+        'location','northeast');
+else
+    lgd = legend('real target','agent initial location','agent path','agent current position',...
+        'location','northwest');
+end
+% legend boxoff
+set(gca,'TickLabelInterpreter','latex','fontsize',10);
+set([xlb,ylb,ttl,lgd],'interpreter','Latex','fontsize',12);
 
+box on
+set(gcf,'units','pixels','innerposition',[200,200,500,500]);
+set(gca,'looseInset',[0 0 0 0]);
 
