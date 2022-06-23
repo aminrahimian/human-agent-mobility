@@ -16,10 +16,10 @@ LevyFlight = 0;
 Dim1 = 2000;
 Dim2 = 2000;
 dx = Dim1/200;
-x1 = 0:dx:Dim;
-x2 = 0:dx:Dim;
+x1 = 0:dx:Dim1;
+x2 = 0:dx:Dim2;
 [X,Y] = meshgrid(x1,x2);
-board = [0,0;Dim,0;Dim,Dim;0,Dim;0,0];
+board = [0,0;Dim1,0;Dim1,Dim1;0,Dim2;0,0];
 
 % agent parameters
 V_best = 2.8; % the desired moving velocity under the best environmental condition
