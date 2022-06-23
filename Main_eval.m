@@ -101,8 +101,8 @@ for nn = 1:NN
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%% Edit here according to different python core %%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        idx = pyrunfile('Q_logit_regression.py', 'theta',...
-            nn = t, L = Dim1, H = Dim2, epsilon = Epsilon);
+        idx = pyrunfile('Random_walk.py', 'theta',...
+            nn = t, L = Dim1, H = Dim2);
         theta_target = theta_list(idx);
 
         % setup the location of the fake target according to the command
@@ -125,7 +125,7 @@ for nn = 1:NN
         end
 
         % update the moving velocity according to the env condition
-        v_desire = V_best * interp2(X,Y,v_scale_factor,xy_pede(1),xy_pede(2),'nearest',1);
+        v_desire = V_best * interp2(X,Y,scale_factor,xy_pede(1),xy_pede(2),'nearest',1);
 
         % updata time step
         t = t+1;
@@ -134,7 +134,7 @@ for nn = 1:NN
         xy_pede_save(t,:) = xy_pede;
 
         % update the likelyhood equation
-        radius_factor = radius_factor_best * interp2(X,Y,v_scale_factor,xy_pede(1),xy_pede(2),'nearest',1);
+        radius_factor = radius_factor_best * interp2(X,Y,scale_factor,xy_pede(1),xy_pede(2),'nearest',1);
         Likely = exp(-1*norm(xy_pede - Real_Target)./(radius_factor * R));
 
         % output map to feed to python code, each row
