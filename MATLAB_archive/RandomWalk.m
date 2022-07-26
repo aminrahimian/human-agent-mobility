@@ -1,7 +1,7 @@
 clear;
 clc;
 
-addpath('SubFunc');
+addpath('..\SubFunc');
 
 % rng(1);
 
@@ -22,7 +22,7 @@ dT = 60;
 R = 100;
 
 % determine whether add environmental condition
-ENV = 1; % if 1, heterogeneous environmental condition is used
+ENV = 0; % if 1, heterogeneous environmental condition is used
 if ENV == 1
     load('roi.mat');
     inroi = inROI(roi1,X1(:),X2(:)) | inROI(roi2,X1(:),X2(:));
@@ -35,10 +35,10 @@ scale_factor = ones(length(x1),length(x2));
 scale_factor(inroi) = 0.3;
 
 
-NN = 500; % number of realizations
+NN = 1; % number of realizations
 TimeLength_record = zeros(NN,1); % record the leng of time needed
 
-parfor nn = 1:NN % loop for each realization
+for nn = 1:NN % loop for each realization
     disp(nn);
     
     Real_Target = rand(1,2)*Dim;
