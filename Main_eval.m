@@ -5,6 +5,7 @@
 
 clear;
 addpath('SubFunc');
+load("Real_Targets.mat");
 
 % set the environmental condition
 Dim1 = 3000;
@@ -43,7 +44,6 @@ scale_factor(inroi) = 0.3; % change this for scaling of the agent's movement
 
 % set total number of loops
 NN = 10;
-Real_Target_All = [rand(NN,1) * Dim1, rand(NN,1) * Dim2];
 TimeLength_record = zeros(NN,1); % record the leng of time needed
 Regret_record = cell(NN,1);
 
@@ -57,7 +57,7 @@ for nn = 1:NN
     delete input_*.csv
 
     % randomly generate the location of the real target
-    Real_Target = Real_Target_All(nn,:);
+    Real_Target = [Real_Target_All(nn,1) * Dim1, Real_Target_All(nn,2) * Dim2];
 
     % initial location
     xy_pede = [0,0]; % initial location
@@ -112,7 +112,7 @@ for nn = 1:NN
         Regret(1,t) = idx(2);
 
         % setup the location of the fake target according to the command
-        l_target = 100;
+        l_target = 1000;
         r_target_x = xy_pede(1) + l_target .* cos(theta_target);
         r_target_y = xy_pede(2) + l_target .* sin(theta_target);
         r_target = [r_target_x, r_target_y];
