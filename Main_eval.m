@@ -42,9 +42,10 @@ scale_factor = ones(length(x1),length(x2));
 scale_factor(inroi) = 0.3; % change this for scaling of the agent's movement
 
 % set total number of loops
-NN = 1;
+NN = 10;
 Real_Target_All = [rand(NN,1) * Dim1, rand(NN,1) * Dim2];
 TimeLength_record = zeros(NN,1); % record the leng of time needed
+Regret_record = cell(NN,1);
 
 % The Main Loop
 for nn = 1:NN
@@ -108,6 +109,7 @@ for nn = 1:NN
 
         idx = double(idx);
         theta_target = theta_list(idx(1));
+        Regret(1,t) = idx(2);
 
         % setup the location of the fake target according to the command
         l_target = 100;
@@ -175,6 +177,7 @@ for nn = 1:NN
 
     % Record the total time length needed for this realization
     TimeLength_record(nn) = T_total/3600;
+    Regret_record{nn} = Regret;
     disp(['Realization ',num2str(nn),' using ',num2str(T_total/3600),' hours']);
 end
 %% Plotting a single track
