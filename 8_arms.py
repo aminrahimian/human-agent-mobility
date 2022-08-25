@@ -34,9 +34,9 @@ def choosing_direction(nn,L,H,t1,t2):
     
     which_dir=np.argmin(comparison_table[:,2])
     
-    return which_dir+1
+    return (which_dir+1, 2)
         
 
-theta=choosing_direction(nn,L,H,t1,t2) 
-theta = float(theta)
+theta = choosing_direction(nn,L,H,t1,t2)
+theta = (float(theta[0]),theta[1])
    
