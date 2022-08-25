@@ -6,15 +6,9 @@
 clear;
 addpath('SubFunc');
 
-% Select the case that you want to use as 1, others as 0;
-Shortest = 0;
-ThroughSearch = 0;
-RandomWalk = 0;
-LevyFlight = 0;
-
 % set the environmental condition
-Dim1 = 2000;
-Dim2 = 2000;
+Dim1 = 3000;
+Dim2 = 3000;
 dx = Dim1/200;
 x1 = 0:dx:Dim1;
 x2 = 0:dx:Dim2;
@@ -26,8 +20,10 @@ V_best = 2.8; % the desired moving velocity under the best environmental conditi
 tau = 0.5; % relaxation time
 dt = tau; % time for velocity adjustment
 dT = 60; % time for movement after velocity adjustment
-R = 100; % detection radius parameter
+Epsilon_prime = 100; % detection radius parameter
+Epsilon = Epsilon_prime;
 radius_factor_best = 2; % The radius factor of receiving signal under best env condition
+% Phi = radius_factor * Epsilon
 
 N_arm = 8; % number of arms used
 theta_list = linspace(0,2*(1-1/N_arm),N_arm) * pi; % the space of moving directions
@@ -45,11 +41,9 @@ end
 scale_factor = ones(length(x1),length(x2));
 scale_factor(inroi) = 0.3; % change this for scaling of the agent's movement
 
-% parameter for python code, if any
-Epsilon = 0.9;
-
 % set total number of loops
-NN = 10;
+NN = 1;
+Real_Target_All = [rand(NN,1) * Dim1, rand(NN,1) * Dim2];
 TimeLength_record = zeros(NN,1); % record the leng of time needed
 
 % The Main Loop
@@ -62,7 +56,7 @@ for nn = 1:NN
     delete input_*.csv
 
     % randomly generate the location of the real target
-    Real_Target = [rand(1) * Dim1, rand(1) * Dim2];
+    Real_Target = Real_Target_All(nn,:);
 
     % initial location
     xy_pede = [0,0]; % initial location
@@ -78,7 +72,7 @@ for nn = 1:NN
 
     % probability of receiving a signal
     radius_factor = radius_factor_best * interp2(X,Y,scale_factor,xy_pede(1),xy_pede(2),'nearest',1);
-    Likely = exp(-1*norm(xy_pede - Real_Target)./(radius_factor * R));
+    Likely = exp(-1*norm(xy_pede - Real_Target)./(radius_factor * Epsilon_prime));
 
     % output map to feed to python code
     output_mat = zeros(1,2);
@@ -95,7 +89,7 @@ for nn = 1:NN
     T_total = 0;
 
     % update the result using the output from python
-    while norm(xy_pede - Real_Target) >= R
+    while norm(xy_pede - Real_Target) >= Epsilon
 
         % if don't want to display
 %         disp([num2str(T_total/3600),' hours']);
@@ -104,9 +98,16 @@ for nn = 1:NN
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%% Edit here according to different python core %%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        idx = pyrunfile('Random_walk.py', 'theta',...
-            nn = t, L = Dim1, H = Dim2);
-        theta_target = theta_list(idx);
+
+        idx = pyrunfile('8_arms.py', 'theta',...
+                        nn = t,...
+                        L = Dim1,...
+                        H = Dim2,...
+                        t1 = Real_Target(1,1),...
+                        t2 = Real_Target(1,2));
+
+        idx = double(idx);
+        theta_target = theta_list(idx(1));
 
         % setup the location of the fake target according to the command
         l_target = 100;
@@ -142,7 +143,7 @@ for nn = 1:NN
 
         % update the likelyhood equation
         radius_factor = radius_factor_best * interp2(X,Y,scale_factor,xy_pede(1),xy_pede(2),'nearest',1);
-        Likely = exp(-1*norm(xy_pede - Real_Target)./(radius_factor * R));
+        Likely = exp(-1*norm(xy_pede - Real_Target)./(radius_factor * Epsilon_prime));
 
         % output map to feed to python code, each row
         output_mat(t,1:2) = xy_pede;
@@ -155,7 +156,7 @@ for nn = 1:NN
         vec2 = Real_Target - v1;
         if dot(vec1,vec2)>=0 && dot(vec1,vec2)<=dot(vec1,vec1)
             d = abs( det([Real_Target-v1;v2-v1]) )/norm(v2-v1); % distanct from the real target to v1-v2
-            if d <= R
+            if d <= Epsilon
                 break
             end
         end
@@ -202,7 +203,7 @@ else
     lgd = legend('real target','agent initial location','agent path','agent current position',...
         'location','northwest');
 end
-% legend boxoff
+legend boxoff
 set(gca,'TickLabelInterpreter','latex','fontsize',10);
 set([xlb,ylb,ttl,lgd],'interpreter','Latex','fontsize',12);
 
