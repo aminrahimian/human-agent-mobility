@@ -8,8 +8,8 @@ addpath('SubFunc');
 load("Real_Targets.mat");
 
 % set the environmental condition
-Dim1 = 3000;
-Dim2 = 3000;
+Dim1 = 2000;
+Dim2 = 2000;
 dx = Dim1/200;
 x1 = 0:dx:Dim1;
 x2 = 0:dx:Dim2;
@@ -107,9 +107,9 @@ for nn = 1:NN
                         t1 = Real_Target(1,1),...
                         t2 = Real_Target(1,2));
 
-        idx = double(idx);
-        theta_target = theta_list(idx(1));
-        Regret(1,t) = idx(2);
+%         idx = double(idx);
+        theta_target = theta_list(double(idx{1}));
+%         Regret(1,t) = idx{2};
 
         % setup the location of the fake target according to the command
         l_target = 1000;
@@ -177,7 +177,7 @@ for nn = 1:NN
 
     % Record the total time length needed for this realization
     TimeLength_record(nn) = T_total/3600;
-    Regret_record{nn} = Regret;
+%     Regret_record{nn} = Regret;
     disp(['Realization ',num2str(nn),' using ',num2str(T_total/3600),' hours']);
 end
 %% Plotting a single track
