@@ -184,7 +184,10 @@ for nn = 1:NN
     disp(['Realization ',num2str(nn),' using ',num2str(T_total/3600),' hours']);
 end
 
-% save('8arms_shortest_data.mat','TimeLength_record','Regret_record','-v7.3');
+save('8arms_regret.mat','Regret_record','-v7.3');
+writematrix(TimeLength_record,'8arms_timelength.csv');
+
+
 %% Plotting a single track
 figure(2);
 hold on
