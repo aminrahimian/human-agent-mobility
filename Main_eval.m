@@ -88,6 +88,7 @@ for nn = 1:NN
 
     % initial some variables to record value
     T_total = 0;
+    Regret = [];
 
     % update the result using the output from python
     while norm(xy_pede - Real_Target) >= Epsilon
@@ -107,9 +108,11 @@ for nn = 1:NN
                         t1 = Real_Target(1,1),...
                         t2 = Real_Target(1,2));
 
-%         idx = double(idx);
+%         theta_target = theta_list(double(idx{1}));
+
+        idx = cell(idx);
         theta_target = theta_list(double(idx{1}));
-%         Regret(1,t) = idx{2};
+        Regret(1,t) = double(idx{2});
 
         % setup the location of the fake target according to the command
         l_target = 1000;
@@ -177,9 +180,11 @@ for nn = 1:NN
 
     % Record the total time length needed for this realization
     TimeLength_record(nn) = T_total/3600;
-%     Regret_record{nn} = Regret;
+    Regret_record{nn} = Regret;
     disp(['Realization ',num2str(nn),' using ',num2str(T_total/3600),' hours']);
 end
+
+% save('8arms_shortest_data.mat','TimeLength_record','Regret_record','-v7.3');
 %% Plotting a single track
 figure(2);
 hold on
