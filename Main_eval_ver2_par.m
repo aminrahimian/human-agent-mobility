@@ -20,7 +20,7 @@ board = [0,0;Dim1,0;Dim1,Dim2;0,Dim2;0,0];
 V_best = 2.8; % the desired moving velocity under the best environmental condition
 tau = 0.5; % relaxation time
 dt = tau; % time for velocity adjustment
-dT = 60; % time for movement after velocity adjustment
+dT = 50; % time for movement after velocity adjustment
 Epsilon_prime = 100; % detection radius parameter
 Epsilon = Epsilon_prime;
 radius_factor_best = 2; % The radius factor of receiving signal under best env condition
@@ -30,7 +30,7 @@ N_arm = 8; % number of arms used
 theta_list = linspace(0,2*(1-1/N_arm),N_arm) * pi; % the space of moving directions
 
 % sampling parameter
-N_sample = 10; % the number of samples taken by agent at each step
+N_sample = 20; % the number of samples taken by agent at each step
 
 
 % determine whether add environmental condition
@@ -106,7 +106,7 @@ parfor idx1 = 1:NN
         %%%%%%% Edit here according to different python core %%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        idx = pyrunfile('8_arms.py', 'theta',...
+        idx = pyrunfile('BayesI.py', 'theta',...
                         nn = t,...
                         L = Dim1,...
                         H = Dim2,...
