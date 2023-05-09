@@ -1,14 +1,12 @@
+# Reinforcement Learning Velocity for Heterogenous Target Distribution 
+# Python 3.10
+
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
 import itertools
 from scipy.spatial import distance
 
-
-# This is a sample Python script.
-
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 
 L=2000
 n_targets=2000
