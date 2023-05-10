@@ -9,7 +9,7 @@ from scipy.spatial import distance
 
 
 L=2000
-n_targets=2000
+n_targets=500
 
 
 # class Enviroment allows to define a search area of dimension L x L  wiht a n_targets
