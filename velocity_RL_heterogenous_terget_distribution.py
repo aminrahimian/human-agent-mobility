@@ -56,26 +56,19 @@ class Enviroment:
 class Agent:
 
 
-    def __init__(self):
+   def __init__(self):
 
         self.posx=0
         self.posy=0
         self.H=100
         self.alpha=1e-10
 
-        actions = [0, np.pi / 2, np.pi, 1.5 * np.pi]
+
         velocities=[10,20,50]
 
-        temp_vector=[]
+        self.velocities=velocities
 
-        for i in itertools.product(actions,velocities):
-            temp_vector.append(i)
-
-        l1=list(range(len(temp_vector)))
-        d1=dict(zip(l1,temp_vector))
-        self.angles_vel=d1
-
-        self.vector_weights=(1e-12)*np.ones((len(temp_vector),5))
+        self.vector_weights=(1e-12)*np.ones((len(velocities),5))
 
 
     def which_action(self):
