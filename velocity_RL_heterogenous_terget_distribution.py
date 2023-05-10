@@ -121,28 +121,29 @@ class Agent:
 
         return sample_locations
 
+     def new_positions(self,action,angle):
 
-    def new_positions(self,action):
+            new_x = self.posx + self.velocities[action] * np.cos(angle)
 
-        new_x = self.posx + self.angles_vel[action][1] * np.cos(self.angles_vel[action][0])
-
-        if new_x>L:
-            new_x= 2*L - new_x
+            if new_x>L:
+                new_x= 2*L - new_x
 
 
-        if new_x<0:
-            new_x=-1*new_x
+            if new_x<0:
+                new_x=-1*new_x
 
-        new_y = self.posy + self.angles_vel[action][1] * np.sin(self.angles_vel[action][0])
+            new_y = self.posy + self.velocities[action] * np.sin(angle)
 
-        if new_y>L:
+            if new_y>L:
 
-            new_y=2*L-new_y
+                new_y=2*L-new_y
 
-        if new_y<0:
-            new_y=-1*new_y
+            if new_y<0:
+                new_y=-1*new_y
 
-        return (new_x,new_y)
+            return (new_x,new_y)
+
+
 
 
     def update_weights(self,enviroment,action):
