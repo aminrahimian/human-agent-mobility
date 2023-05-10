@@ -12,6 +12,7 @@ L=2000
 n_targets=2000
 
 
+# class Enviroment allows to define a search area of dimension L x L  wiht a n_targets
 
 class Enviroment:
 
@@ -48,6 +49,9 @@ class Enviroment:
         self.targets=self.targets.difference(to_delete)
 
         return reward
+
+    
+ # class Agent defines the actions of the searcher (dron, robot, etc.) and the optimal policy
 
 class Agent:
 
