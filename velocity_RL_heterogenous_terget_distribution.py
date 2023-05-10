@@ -18,11 +18,13 @@ class Enviroment:
 
     def __init__(self,L,n_targets):
 
+        # Targets follow a normal distribution with mean L/2 and sd=300 
+        
         self.dim=L
         self.distribution_mean_x=L/2
         self.distribution_mean_y=L/2
-        self.distribution_sd_x=200
-        self.distribution_sd_y=200
+        self.distribution_sd_x=300
+        self.distribution_sd_y=300
 
         tx = norm.rvs(loc=self.distribution_mean_x, scale=self.distribution_sd_x,size=n_targets)
         ty = norm.rvs(loc=self.distribution_mean_y, scale=self.distribution_sd_y, size=n_targets)
