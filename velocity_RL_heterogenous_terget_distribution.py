@@ -78,7 +78,7 @@ class Agent:
 
         if np.random.uniform(0,1)<epsilon:
 
-            return np.random.randint(0,12, size=1)[0]
+            return np.random.randint(0,3, size=1)[0]
 
         else:
 
