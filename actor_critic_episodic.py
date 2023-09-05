@@ -164,7 +164,10 @@ class Agent:
         self.pos_x = self.pos_x_prime
         self.pos_y = self.pos_y_prime
 
-    def delta_value(self, reward, action):
+    def update_weigths(self):
+        pass
+
+    def updates_weigts(self, reward, action):
 
         self.update_next_state(action)
         # print(a1.pos_x)
@@ -173,18 +176,14 @@ class Agent:
         # print(a1.pos_y_prime)
         current_s = np.dot(self.feature_vector(self.pos_x, self.pos_y), self.weigths_vector)
         next_s = self.gamma * np.dot(self.feature_vector(self.pos_x_prime, self.pos_y_prime), self.weigths_vector)
+        delta= reward +next_s-current_s
+        self.weigths_vector=self.weigths_vector+\
+                            self.alpha*delta*self.feature_vector(self.pos_x, self.pos_y)
+
         self.update_state()
 
-        return reward +next_s-current_s
+        return delta
 
-
-    def update_weigths(self):
-
-        pass
-
-
-
-    def
 
 
 radius_coarse=750
@@ -195,9 +194,8 @@ freq_sampling=1
 episodes=50
 
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
-print(a1.delta_value(10,(4,5)))
-
-
+print(a1.updates_weigts(20,(30,40)))
+print(a1.weigths_vector)
 
 
 
