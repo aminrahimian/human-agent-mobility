@@ -1,11 +1,13 @@
 import numpy as np
 from scipy.stats import norm
+from scipy.stats import bernoulli
 import itertools
 from scipy.spatial import distance
 import copy
 import pickle
 import matplotlib.pyplot as plt
 import time
+from scipy.stats import pareto
 
 
 # generate targets.
@@ -137,6 +139,7 @@ class Agent:
         self.theta_sd_x_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
         self.theta_mu_y_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
         self.theta_sd_y_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
+        self.theta=self.theta_mu_x_vector+self.theta_mu_x_vector
         self.radius_coarse = radius_coarse
         self.radius_detection=radius_detection
         self.freq_sampling=freq_sampling
@@ -157,7 +160,7 @@ class Agent:
 
         return inside_circle
 
-    def sample_action(self):
+    def sample_action_continous(self):
 
         action_mean_x = np.dot(self.theta_mu_x_vector,
                                self.feature_vector(self.pos_x, self.pos_y))
@@ -175,6 +178,35 @@ class Agent:
         vel_y = norm.rvs(loc=action_mean_y, scale=action_sd_y, size=1)[0]
 
         return (vel_x, vel_y)
+
+    def sample_parameter(self):
+
+        #calculate h(s,a theta)
+
+        partial_x_sa=list(self.feature_vector(self.pos_x, self.pos_y))
+        zeros_x_sa=len(partial_x_sa)*[0]
+
+        x_sa_mu_2 = partial_x_sa + zeros_x_sa
+        x_sa_mu_3 =  zeros_x_sa + partial_x_sa
+
+        h_mu_2 = np.dot(self.theta, x_sa_mu_2)
+        h_mu_3 = np.dot(self.theta, x_sa_mu_3)
+
+        p_mu_2 = h_mu_2/(h_mu_2+h_mu_3)
+
+        is_mu_2=bernoulli.rvs(p_mu_2, size=1)[0]
+
+        if is_mu_2==1:
+
+            parameter=2
+
+        else:
+
+            parameter=3
+
+        return parameter
+
+
 
     def update_next_state(self,action):
 
@@ -218,7 +250,7 @@ freq_sampling=1
 episodes=50
 
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
-print(a1.sample_action())
+print(a1.sample_parameter())
 
 
 
