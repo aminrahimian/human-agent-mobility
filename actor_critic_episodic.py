@@ -130,15 +130,15 @@ class Agent:
         self.pos_x_prime=L/2
         self.pos_y_prime=L/2
         grid_line = 1000 * np.arange(0.5, 10.5, 1)
-        center_lay1 = list(itertools.product(grid_line, grid_line))
-        center_lay2 = list(itertools.product(grid_line, grid_line))
-        center_init = [(L/2, L/2)]
-        self.centers = center_init + center_lay1 + center_lay2
-        self.weigths_vector = [100] + len(center_lay1) * [100] + len(center_lay1) * [0]
-        self.theta_mu_x_vector=  [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
-        self.theta_sd_x_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
-        self.theta_mu_y_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
-        self.theta_sd_y_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
+        self.center_lay1 = list(itertools.product(grid_line, grid_line))
+        self.center_lay2 = list(itertools.product(grid_line, grid_line))
+        self.center_init = [(L/2, L/2)]
+        self.centers = self.center_init + self.center_lay1 + self.enter_lay2
+        self.weigths_vector = [100] + len(self.center_lay1) * [100] + len(self.center_lay2) * [0]
+        self.theta_mu_x_vector=  [1] + len(self.center_lay1) * [1] + len(self.center_lay2) * [0]
+        self.theta_sd_x_vector = [1] + len(self.center_lay1) * [1] + len(self.center_lay2) * [0]
+        self.theta_mu_y_vector = [1] + len(self.center_lay1) * [1] + len(self.center_lay2) * [0]
+        self.theta_sd_y_vector = [1] + len(self.center_lay1) * [1] + len(self.center_lay2) * [0]
         self.theta=self.theta_mu_x_vector+self.theta_mu_x_vector
         self.radius_coarse = radius_coarse
         self.radius_detection=radius_detection
@@ -151,13 +151,33 @@ class Agent:
         self.parameter=2
 
 
-    def feature_vector(self, pos_x, pos_y):
+    def feature_vector(self, pos_x, pos_y, episode):
 
-        actual_pos = len(self.centers) * [(pos_x,pos_y)]
-        iter = len(self.centers)
-        distances = np.array([distance.euclidean(self.centers[i], actual_pos[i]) for i in range(iter)])
-        inside_circle = (distances <= self.radius_coarse)
-        inside_circle = inside_circle.astype(int)
+        if episode==0:
+
+            inside_circle = np.array([1] + len(self.center_lay1) * [0] + len(self.center_lay2) * [0])
+
+        elif (episode>0) & (episode<self.episodes):
+
+            actual_pos = len(self.center_lay1) * [(pos_x, pos_y)]
+            iter = len(self.centers)
+            distances = np.array([distance.euclidean(self.center_lay1[i], actual_pos[i]) for i in range(iter)])
+            inside_circle_1 = (distances <= self.radius_coarse)
+            inside_circle_1 = list(inside_circle_1.astype(int))
+
+            inside_circle=[0]+ inside_circle_1+ len(self.center_lay1) * [0]
+
+
+        else:
+
+            actual_pos = len(self.center_lay1) * [(pos_x, pos_y)]
+            iter = len(self.centers)
+            distances = np.array([distance.euclidean(self.center_lay1[i], actual_pos[i]) for i in range(iter)])
+            inside_circle_1 = (distances <= self.radius_coarse)
+            inside_circle_1 = list(inside_circle_1.astype(int))
+
+            inside_circle = [0] + len(self.center_lay1) * [0]+inside_circle_1
+
 
         return inside_circle
 
@@ -263,8 +283,6 @@ class Agent:
 
         if self.pos_y_prime < 0:
             self.pos_y_prime = -1 * self.pos_y_prime
-
-
 
     def update_state(self):
 
