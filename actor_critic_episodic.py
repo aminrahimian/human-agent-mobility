@@ -179,7 +179,9 @@ class Agent:
 
 
     def update_weigths(self):
+
         pass
+
 
 
     def
