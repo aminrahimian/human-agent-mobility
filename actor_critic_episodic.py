@@ -148,6 +148,7 @@ class Agent:
         self.gamma = 1
         self.time_step = 0
         self.episodes=episodes
+        self.parameter=2
 
 
     def feature_vector(self, pos_x, pos_y):
@@ -201,11 +202,14 @@ class Agent:
 
             parameter=3
 
+        self.parameter=parameter
+
         return parameter
 
     def sample_action(self):
 
-        mu=self.sample_parameter()
+        self.sample_parameter()
+        mu=self.parameter
         l=pareto.rvs(mu, scale=500,size=1)[0]
         angle=np.random.uniform(0,2*np.pi,1)[0]
 
@@ -213,6 +217,34 @@ class Agent:
         vel_y = l*np.sin(angle)
 
         return (vel_x, vel_y)
+
+    def nabla_pi_sa(self):
+
+        partial_x_sa = list(self.feature_vector(self.pos_x, self.pos_y))
+        zeros_x_sa = len(partial_x_sa) * [0]
+        x_sa_mu_2 = partial_x_sa + zeros_x_sa
+        x_sa_mu_3 = zeros_x_sa + partial_x_sa
+
+        h_mu_2 = np.dot(self.theta, x_sa_mu_2)
+        h_mu_3 = np.dot(self.theta, x_sa_mu_3)
+
+        p_mu_2 = h_mu_2 / (h_mu_2 + h_mu_3)
+        p_mu_3 = h_mu_3 / (h_mu_2 + h_mu_3)
+
+        cum_soft_max=p_mu_2*x_sa_mu_2+\
+                     p_mu_3*x_sa_mu_3
+
+        if self.parameter==2:
+
+            nabla = x_sa_mu_2 - cum_soft_max
+
+        else:
+
+            nabla = x_sa_mu_3 - cum_soft_max
+
+
+
+        return  nabla
 
 
     def update_next_state(self,action):
@@ -237,10 +269,12 @@ class Agent:
         # print(a1.pos_y_prime)
         current_s = np.dot(self.feature_vector(self.pos_x, self.pos_y), self.weigths_vector)
         next_s = self.gamma * np.dot(self.feature_vector(self.pos_x_prime, self.pos_y_prime), self.weigths_vector)
-        delta= reward +next_s-current_s
+        delta = reward +next_s-current_s
         self.weigths_vector=self.weigths_vector+\
                             self.alpha*delta*self.feature_vector(self.pos_x, self.pos_y)
 
+        self.theta = self.theta+\
+            self.alpha*delta*self.nabla_pi_sa()
 
 
         self.update_state()
@@ -257,8 +291,8 @@ freq_sampling=1
 episodes=50
 
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
-print(a1.sample_parameter())
-print(np.random.uniform(0,2*np.pi,1)[0])
+print(a1.sample_action())
+
 
 
 
