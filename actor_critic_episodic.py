@@ -152,15 +152,28 @@ class Agent:
 
         return inside_circle
 
-    def update_states(self,action):
+    def update_next_state(self,action):
 
         vel_x=action[0]
         vel_y=action[1]
+        self.pos_x_prime = self.pos_x + vel_x * 1
+        self.pos_y_prime = self.pos_y + vel_y * 1
 
+    def update_state(self):
 
+        self.pos_x = self.pos_x_prime
+        self.pos_y = self.pos_y_prime
 
 
     def delta_value(self):
+
+
+
+
+
+
+
+
 
 
 
