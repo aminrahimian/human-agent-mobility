@@ -133,6 +133,10 @@ class Agent:
         center_init = [(L/2, L/2)]
         self.centers = center_init + center_lay1 + center_lay2
         self.weigths_vector = [100] + len(center_lay1) * [100] + len(center_lay1) * [0]
+        self.theta_mu_x_vector=  [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
+        self.theta_sd_x_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
+        self.theta_mu_y_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
+        self.theta_sd_y_vector = [1] + len(center_lay1) * [1] + len(center_lay1) * [0]
         self.radius_coarse = radius_coarse
         self.radius_detection=radius_detection
         self.freq_sampling=freq_sampling
@@ -141,6 +145,7 @@ class Agent:
         self.gamma = 1
         self.time_step = 0
         self.episodes=episodes
+
 
     def feature_vector(self, pos_x, pos_y):
 
@@ -151,6 +156,25 @@ class Agent:
         inside_circle = inside_circle.astype(int)
 
         return inside_circle
+
+    def sample_action(self):
+
+        action_mean_x = np.dot(self.theta_mu_x_vector,
+                               self.feature_vector(self.pos_x, self.pos_y))
+
+        action_sd_x = np.exp(np.dot(self.theta_mu_x_vector,
+                                    self.feature_vector(self.pos_x, self.pos_y)))
+
+        action_mean_y = np.dot(self.theta_mu_y_vector,
+                               self.feature_vector(self.pos_x, self.pos_y))
+
+        action_sd_y = np.exp(np.dot(self.theta_mu_y_vector,
+                                    self.feature_vector(self.pos_x, self.pos_y)))
+
+        vel_x = norm.rvs(loc=action_mean_x, scale=action_sd_x, size=1)[0]
+        vel_y = norm.rvs(loc=action_mean_y, scale=action_sd_y, size=1)[0]
+
+        return (vel_x, vel_y)
 
     def update_next_state(self,action):
 
@@ -164,10 +188,8 @@ class Agent:
         self.pos_x = self.pos_x_prime
         self.pos_y = self.pos_y_prime
 
-    def update_weigths(self):
-        pass
-
     def updates_weigts(self, reward, action):
+
 
         self.update_next_state(action)
         # print(a1.pos_x)
@@ -179,6 +201,8 @@ class Agent:
         delta= reward +next_s-current_s
         self.weigths_vector=self.weigths_vector+\
                             self.alpha*delta*self.feature_vector(self.pos_x, self.pos_y)
+
+
 
         self.update_state()
 
@@ -194,8 +218,7 @@ freq_sampling=1
 episodes=50
 
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
-print(a1.updates_weigts(20,(30,40)))
-print(a1.weigths_vector)
+print(a1.sample_action())
 
 
 
