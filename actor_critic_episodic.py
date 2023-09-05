@@ -231,8 +231,8 @@ class Agent:
         p_mu_2 = h_mu_2 / (h_mu_2 + h_mu_3)
         p_mu_3 = h_mu_3 / (h_mu_2 + h_mu_3)
 
-        cum_soft_max=p_mu_2*x_sa_mu_2+\
-                     p_mu_3*x_sa_mu_3
+        cum_soft_max=p_mu_2*np.array(x_sa_mu_2)+\
+                     p_mu_3*np.array(x_sa_mu_3)
 
         if self.parameter==2:
 
@@ -243,9 +243,7 @@ class Agent:
             nabla = x_sa_mu_3 - cum_soft_max
 
 
-
         return  nabla
-
 
     def update_next_state(self,action):
 
@@ -253,6 +251,20 @@ class Agent:
         vel_y=action[1]
         self.pos_x_prime = self.pos_x + vel_x * 1
         self.pos_y_prime = self.pos_y + vel_y * 1
+
+        if self.pos_x_prime > self.L:
+            self.pos_x_prime = 2 * self.L - self.pos_x_prime
+
+        if self.pos_x_prime < 0:
+            self.pos_x_prime = -1 * self.pos_x_prime
+
+        if self.pos_y_prime > self.L:
+            self.pos_y_prime = 2 * self.L - self.pos_y_prime
+
+        if self.pos_y_prime < 0:
+            self.pos_y_prime = -1 * self.pos_y_prime
+
+
 
     def update_state(self):
 
@@ -276,10 +288,11 @@ class Agent:
         self.theta = self.theta+\
             self.alpha*delta*self.nabla_pi_sa()
 
-
         self.update_state()
 
         return delta
+
+
 
 
 
@@ -291,7 +304,12 @@ freq_sampling=1
 episodes=50
 
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
-print(a1.sample_action())
+
+action= a1.sample_action()
+
+a1.updates_weigts(24, action)
+
+print(a1.pos_y)
 
 
 
