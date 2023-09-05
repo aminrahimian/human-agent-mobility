@@ -185,13 +185,10 @@ class Agent:
 
         partial_x_sa=list(self.feature_vector(self.pos_x, self.pos_y))
         zeros_x_sa=len(partial_x_sa)*[0]
-
         x_sa_mu_2 = partial_x_sa + zeros_x_sa
         x_sa_mu_3 =  zeros_x_sa + partial_x_sa
-
         h_mu_2 = np.dot(self.theta, x_sa_mu_2)
         h_mu_3 = np.dot(self.theta, x_sa_mu_3)
-
         p_mu_2 = h_mu_2/(h_mu_2+h_mu_3)
 
         is_mu_2=bernoulli.rvs(p_mu_2, size=1)[0]
@@ -206,6 +203,16 @@ class Agent:
 
         return parameter
 
+    def sample_action(self):
+
+        mu=self.sample_parameter()
+        l=pareto.rvs(mu, scale=500,size=1)[0]
+        angle=np.random.uniform(0,2*np.pi,1)[0]
+
+        vel_x = l*np.cos(angle)
+        vel_y = l*np.sin(angle)
+
+        return (vel_x, vel_y)
 
 
     def update_next_state(self,action):
@@ -251,6 +258,7 @@ episodes=50
 
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
 print(a1.sample_parameter())
+print(np.random.uniform(0,2*np.pi,1)[0])
 
 
 
