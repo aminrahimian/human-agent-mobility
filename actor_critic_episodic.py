@@ -118,7 +118,6 @@ class Enviroment:
         for t in range(self.n_threats):
             self.threats[t] = (self.threats[t][0], self.threats[t][1], 0)
 
-
 class Agent:
 
     def __init__(self, radius_coarse, L, T,radius_detection, freq_sampling,episodes):
@@ -160,7 +159,7 @@ class Agent:
             inside_circle = np.array([1] + len(self.center_lay1) * [0] + len(self.center_lay2) * [0])
             # print(" init state")
 
-        elif (self.episode>0) & (self.episode<self.episodes):
+        elif (self.episode>0) & (self.episode+1<=self.episodes):
 
             # print(">1")
             actual_pos = len(self.center_lay1) * [(pos_x, pos_y)]
@@ -182,6 +181,7 @@ class Agent:
             inside_circle_1 = list(inside_circle_1.astype(int))
 
             inside_circle = [0] + len(self.center_lay1) * [0]+inside_circle_1
+            # print(" feature vector " +str(inside_circle) )
 
 
         return np.array(inside_circle)
@@ -233,10 +233,10 @@ class Agent:
 
         self.sample_parameter()
         mu=self.parameter-1
-        print("parameter mu :" +str(self.parameter))
+
         l=pareto.rvs(mu, scale=500,size=1)[0]
         angle=np.random.uniform(0,2*np.pi,1)[0]
-
+        print("angle vel :" + str(angle))
         vel_x = l*np.cos(angle)
         vel_y = l*np.sin(angle)
 
@@ -299,25 +299,44 @@ class Agent:
 
     def updates_weigts(self, reward, action):
 
-
         self.update_next_state(action)
-        # print(a1.pos_x)
-        # print(a1.pos_y)
-        # print(a1.pos_x_prime)
-        # print(a1.pos_y_prime)
-        current_s = np.dot(self.feature_vector(self.pos_x, self.pos_y), self.weigths_vector)
-        next_s = self.gamma * np.dot(self.feature_vector(self.pos_x_prime, self.pos_y_prime), self.weigths_vector)
-        delta = reward +next_s-current_s
-        self.weigths_vector=np.array(self.weigths_vector)+\
-                            np.array(self.alpha*delta*self.feature_vector(self.pos_x, self.pos_y))
+        print("current position: " +str((a1.pos_x, a1.pos_y)))
+        print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
+        x_s = self.feature_vector(self.pos_x, self.pos_y)
+        x_s_prime = self.feature_vector(self.pos_x_prime, self.pos_y_prime)
+        current_s = np.dot(x_s, self.weigths_vector)
+        next_s = self.gamma * np.dot(x_s_prime, self.weigths_vector)
 
-        self.theta = self.theta+\
-            self.alpha*delta*self.nabla_pi_sa()
+        print("v_(S, w) : "  +str(current_s))
+        print("v_(S',w) : " + str(next_s))
+
+        if (self.episode+2 <=self.episodes):
+
+            delta = reward + next_s - current_s
+
+            self.weigths_vector = np.array(self.weigths_vector) + \
+                                  np.array(self.alpha * delta * x_s)
+
+            self.theta = self.theta + \
+                         self.alpha * delta * self.nabla_pi_sa()
+
+        elif (self.episode+1 ==self.episodes):
+
+            delta = reward  - current_s
+
+            self.weigths_vector = np.array(self.weigths_vector) + \
+                                  np.array(self.alpha * delta * x_s)
+
+            self.theta = self.theta + \
+                         self.alpha * delta * self.nabla_pi_sa()
+
+        else:
+
+            pass
 
         self.update_state()
 
         return delta
-
 
 
 radius_coarse=750
@@ -330,7 +349,7 @@ episodes=5
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
 
 
-for i in range(6):
+for i in range(5):
 
     print("==============================")
     print("Episode: " + str(a1.episode))
@@ -339,11 +358,11 @@ for i in range(6):
     reward=20
     a1.updates_weigts(reward, action)
     print("x: " + str(a1.pos_x) + ",y:"  +str(a1.pos_y))
-    time.sleep(1)
+    time.sleep(2)
 
 
-print(a1.path_x)
-print(a1.path_y)
+print(a1.weigths_vector)
+
 
 
 
