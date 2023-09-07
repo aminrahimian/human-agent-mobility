@@ -21,6 +21,7 @@ class Enviroment:
         target_cluster_sd_y = 4
         self.n_threats=5
 
+
         target_global_mean_x = 0.5 * L
         target_global_mean_y = 0.5 * L
 
@@ -118,6 +119,28 @@ class Enviroment:
         for t in range(self.n_threats):
             self.threats[t] = (self.threats[t][0], self.threats[t][1], 0)
 
+
+    def collected_targets(self, agent):
+
+        """ Return the number of targets given the historical
+        position of the agent
+        """
+        path_x = agent.path_x
+        path_y = agent.path_y
+
+        agent_path=[(path_x[i], path_y[i]) for i in range(len(path_x))]
+
+        target_loc = [(5000, 6000), (7000, 8000)]
+        target_combinations = list(itertools.product(agent_path, target_loc))
+
+        target_dist = [distance.euclidean(target_combinations[i][0], target_combinations[i][1]) for i in
+                       range(len(target_combinations))]
+
+        return sum(np.array(target_dist) <= agent.radius_detection)
+
+
+
+
 class Agent:
 
     def __init__(self, radius_coarse, L, T,radius_detection, freq_sampling,episodes):
@@ -185,7 +208,6 @@ class Agent:
 
 
         return np.array(inside_circle)
-
     def sample_action_continous(self):
 
         action_mean_x = np.dot(self.theta_mu_x_vector,
@@ -204,7 +226,6 @@ class Agent:
         vel_y = norm.rvs(loc=action_mean_y, scale=action_sd_y, size=1)[0]
 
         return (vel_x, vel_y)
-
     def sample_parameter(self):
 
         #calculate h(s,a theta)
@@ -338,31 +359,54 @@ class Agent:
 
         return delta
 
+    def reset_agent(self):
+
+        self.pos_x = L / 2
+        self.pos_y = L / 2
+        self.pos_x_prime = L / 2
+        self.pos_y_prime = L / 2
+        self.episode=0
+
+
+#Initialization values
+
+
+
 
 radius_coarse=750
 L=10000
 T=50
 radius_detection=25
 freq_sampling=1
-episodes=5
+episodes=10
+
+# Define Agent object
 
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
 
+#Learning block
 
-for i in range(5):
+for j in range(1):
 
-    print("==============================")
-    print("Episode: " + str(a1.episode))
-    action = a1.sample_action()
-    print("action " +str (action))
-    reward=20
-    a1.updates_weigts(reward, action)
-    print("x: " + str(a1.pos_x) + ",y:"  +str(a1.pos_y))
-    time.sleep(2)
+    # Loop for episodes
 
+    for i in range(10):
+
+        # Loop for one complete episode
+
+        print("==============================")
+        print("Episode: " + str(a1.episode))
+        action = a1.sample_action()
+        print("action " +str (action))
+        reward=4
+        a1.updates_weigts(reward, action)
+        print("x: " + str(a1.pos_x) + ",y:"  +str(a1.pos_y))
+        time.sleep(0)
+
+
+    a1.reset_agent()
 
 print(a1.weigths_vector)
-
 
 
 
