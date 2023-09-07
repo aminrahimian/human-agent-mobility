@@ -9,97 +9,13 @@ import matplotlib.pyplot as plt
 import time
 from scipy.stats import pareto
 
-
 # generate targets.
 class Enviroment:
-    def __init__(self, L, n_cluster,corr,n_target_1, n_target_2=0,n_target_3=0):
+    def __init__(self, L, target_location):
 
         self.L = L
-        target_global_sd_x=10
-        target_global_sd_y=10
-        target_cluster_sd_x = 4
-        target_cluster_sd_y = 4
-        self.n_threats=5
+        self.target_location=target_location
 
-
-        target_global_mean_x = 0.5 * L
-        target_global_mean_y = 0.5 * L
-
-        if n_cluster==1:
-
-            center_target_1_x = norm.rvs(loc=target_global_mean_x, scale=target_global_sd_x, size=1)[0]
-            center_target_1_y = norm.rvs(loc=target_global_mean_y, scale=target_global_sd_y, size=1)[0]
-
-            target_1_x = norm.rvs(loc=center_target_1_x, scale=target_cluster_sd_x, size=n_target_1)
-            target_1_y = norm.rvs(loc=center_target_1_y, scale=target_cluster_sd_y, size=n_target_1)
-
-            target_2_x = norm.rvs(loc=0, scale=0, size=0)
-            target_2_y = norm.rvs(loc=0, scale=0, size=0)
-
-            target_3_x = norm.rvs(loc=0, scale=0, size=0)
-            target_3_y = norm.rvs(loc=0, scale=0, size=0)
-            self.n_targets = n_target_1 + n_target_2 + n_target_3
-
-            target_x = np.concatenate((target_1_x, target_2_x, target_3_x))
-            target_y = np.concatenate((target_1_y, target_2_y, target_3_y))
-
-        elif n_cluster==2:
-
-            center_target_1_x = norm.rvs(loc=target_global_mean_x, scale=target_global_sd_x, size=n_cluster)
-            center_target_1_y = norm.rvs(loc=target_global_mean_y, scale=target_global_sd_y, size=n_cluster)
-
-            target_1_x = norm.rvs(loc=center_target_1_x[0], scale=target_cluster_sd_x, size=n_target_1)
-            target_1_y = norm.rvs(loc=center_target_1_y[0], scale=target_cluster_sd_y, size=n_target_1)
-
-            target_2_x = norm.rvs(loc=center_target_1_x[1], scale=target_cluster_sd_x, size=n_target_2)
-            target_2_y = norm.rvs(loc=center_target_1_y[1], scale=target_cluster_sd_y, size=n_target_2)
-
-            target_3_x = norm.rvs(loc=0, scale=0, size=0)
-            target_3_y = norm.rvs(loc=0, scale=0, size=0)
-
-            self.n_targets = n_target_1 + n_target_2 + n_target_3
-
-            target_x = np.concatenate((target_1_x, target_2_x, target_3_x))
-            target_y = np.concatenate((target_1_y, target_2_y, target_3_y))
-
-        else:
-
-            center_target_1_x = norm.rvs(loc=target_global_mean_x, scale=target_global_sd_x, size=n_cluster)
-            center_target_1_y = norm.rvs(loc=target_global_mean_y, scale=target_global_sd_y, size=n_cluster)
-
-            target_1_x = norm.rvs(loc=center_target_1_x[0], scale=target_cluster_sd_x, size=n_target_1)
-            target_1_y = norm.rvs(loc=center_target_1_y[0], scale=target_cluster_sd_y, size=n_target_1)
-
-            target_2_x = norm.rvs(loc=center_target_1_x[1], scale=target_cluster_sd_x, size=n_target_2)
-            target_2_y = norm.rvs(loc=center_target_1_y[1], scale=target_cluster_sd_y, size=n_target_2)
-
-            target_3_x = norm.rvs(loc=center_target_1_x[2], scale=target_cluster_sd_x, size=n_target_3)
-            target_3_y = norm.rvs(loc=center_target_1_y[2], scale=target_cluster_sd_y, size=n_target_3)
-
-            self.n_targets = n_target_1 + n_target_2 + n_target_3
-
-            target_x = np.concatenate((target_1_x, target_2_x, target_3_x))
-            target_y = np.concatenate((target_1_y, target_2_y, target_3_y))
-
-        keys_dict_targets=list(range(self.n_targets))
-        coordinates_targets = [(target_x[i], target_y[i],0) for i in range(self.n_targets)]
-
-        # the first element is s, second a
-        self.targets = dict(zip(keys_dict_targets, coordinates_targets))
-
-        mean = np.array([target_global_mean_x, target_global_mean_x])
-        sigmas = np.array([[target_global_sd_x, 0], [0, target_global_sd_x]])
-        pearson_corr= np.array([[1, corr], [corr, 1]])
-
-        cov=sigmas@pearson_corr@sigmas
-
-        _, x_threats = np.random.multivariate_normal(mean, cov, self.n_threats).T
-        _, y_threats = np.random.multivariate_normal(mean, cov, self.n_threats).T
-
-        keys_dict_threats = list(range(self.n_threats))
-        coordinates_threats = [(x_threats[i], y_threats[i], 0) for i in range(self.n_threats)]
-
-        self.threats= dict(zip(keys_dict_threats, coordinates_threats))
 
     def update_target_status(self, key_dict):
 
@@ -119,7 +35,6 @@ class Enviroment:
         for t in range(self.n_threats):
             self.threats[t] = (self.threats[t][0], self.threats[t][1], 0)
 
-
     def collected_targets(self, agent):
 
         """ Return the number of targets given the historical
@@ -130,16 +45,12 @@ class Enviroment:
 
         agent_path=[(path_x[i], path_y[i]) for i in range(len(path_x))]
 
-        target_loc = [(5000, 6000), (7000, 8000)]
-        target_combinations = list(itertools.product(agent_path, target_loc))
+        target_combinations = list(itertools.product(agent_path, self.target_location))
 
         target_dist = [distance.euclidean(target_combinations[i][0], target_combinations[i][1]) for i in
                        range(len(target_combinations))]
 
         return sum(np.array(target_dist) <= agent.radius_detection)
-
-
-
 
 class Agent:
 
@@ -368,10 +279,8 @@ class Agent:
         self.episode=0
 
 
+
 #Initialization values
-
-
-
 
 radius_coarse=750
 L=10000
@@ -379,6 +288,8 @@ T=50
 radius_detection=25
 freq_sampling=1
 episodes=10
+
+target_location=[(5600,7000),(7600,4500)]
 
 # Define Agent object
 
@@ -403,10 +314,11 @@ for j in range(1):
         print("x: " + str(a1.pos_x) + ",y:"  +str(a1.pos_y))
         time.sleep(0)
 
-
     a1.reset_agent()
 
-print(a1.weigths_vector)
+env=Enviroment(L, target_location)
+
+print("targets : " +str(env.collected_targets(a1)))
 
 
 
