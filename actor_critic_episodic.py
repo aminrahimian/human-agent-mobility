@@ -282,7 +282,9 @@ class Agent:
         self.pos_x_prime = L / 2
         self.pos_y_prime = L / 2
         self.episode=0
-
+        self.path_x = [self.pos_x]
+        self.path_y = [self.pos_y]
+        self.targets_collected=[0,0]
 
     def plot_path(self,targets):
 
@@ -304,7 +306,7 @@ L=10000
 T=50
 radius_detection=25
 freq_sampling=1
-episodes=50
+episodes=25
 
 
 targets=np.loadtxt('target_large.csv', delimiter=',')
@@ -321,7 +323,7 @@ for j in range(10):
 
     # Loop for episodes
 
-    for i in range(50):
+    for i in range(25):
 
         # Loop for one complete episode
 
@@ -332,13 +334,16 @@ for j in range(10):
         a1.updates_weigts( action, env)
 
         # time.sleep(0)
+    if j==9:
+
+        break
 
     a1.reset_agent()
 
 
 a1.plot_path(targets)
 a1.targets_collected
-
+a1.path_y
 
 
 
