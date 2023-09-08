@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import time
 from scipy.stats import pareto
 
+
 # generate targets.
 class Enviroment:
     def __init__(self, L, target_location):
@@ -279,6 +280,18 @@ class Agent:
         self.episode=0
 
 
+    def plot_path(self,targets):
+
+        """
+        Plot a search path given the location of the targets as 2D np array
+        :param targets:
+        :return:
+        """
+
+        plt.plot(a1.path_x, a1.path_y, '--o', color='#65C7F5')
+        plt.plot(targets[:, 0], targets[:, 1], 'ko')
+        plt.show()
+
 
 #Initialization values
 
@@ -287,21 +300,24 @@ L=10000
 T=50
 radius_detection=25
 freq_sampling=1
-episodes=10
+episodes=20
 
-target_location=[(5600,7000),(7600,4500)]
+
+targets=np.loadtxt('target_large.csv', delimiter=',')
+target_location=[(targets[i,0],targets[i,1]) for i in range(targets.shape[0])]
 
 # Define Agent object
 
 a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
 
+env=Enviroment(L, target_location)
 #Learning block
 
 for j in range(1):
 
     # Loop for episodes
 
-    for i in range(10):
+    for i in range(20):
 
         # Loop for one complete episode
 
@@ -311,20 +327,14 @@ for j in range(1):
         print("action " +str (action))
         reward=4
         a1.updates_weigts(reward, action)
-        print("x: " + str(a1.pos_x) + ",y:"  +str(a1.pos_y))
-        time.sleep(0)
+        print("targets : " + str(env.collected_targets(a1)))
+
+        # time.sleep(0)
 
     a1.reset_agent()
 
-env=Enviroment(L, target_location)
 
-print("targets : " +str(env.collected_targets(a1)))
-
-
-
-
-
-
+a1.plot_path(targets)
 
 
 
