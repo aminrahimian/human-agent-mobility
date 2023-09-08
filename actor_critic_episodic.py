@@ -86,6 +86,7 @@ class Agent:
         self.episode=0
         self.path_x=[self.pos_x]
         self.path_y=[self.pos_y]
+        self.targets_collected=[0,0]
 
     def feature_vector(self, pos_x, pos_y):
 
@@ -150,7 +151,7 @@ class Agent:
         h_mu_3 = np.dot(self.theta, x_sa_mu_3)
         p_mu_2 = np.exp(h_mu_2)/(np.exp(h_mu_2) +np.exp(h_mu_3))
 
-        print("Probability of u_2 : " +str(p_mu_2))
+        # print("Probability of u_2 : " +str(p_mu_2))
 
         is_mu_2=bernoulli.rvs(p_mu_2, size=1)[0]
 
@@ -167,9 +168,9 @@ class Agent:
         self.sample_parameter()
         mu=self.parameter-1
 
-        l=pareto.rvs(mu, scale=500,size=1)[0]
+        l=pareto.rvs(mu, scale=250,size=1)[0]
         angle=np.random.uniform(0,2*np.pi,1)[0]
-        print("angle vel :" + str(angle))
+        # print("angle vel :" + str(angle))
         vel_x = l*np.cos(angle)
         vel_y = l*np.sin(angle)
 
@@ -188,7 +189,7 @@ class Agent:
         p_mu_2 = np.exp(h_mu_2) / (np.exp(h_mu_2) + np.exp(h_mu_3))
         p_mu_3 = 1- p_mu_2
 
-        print("p_mu_2, p_mu_3: " + str((p_mu_2, p_mu_3)))
+        # print("p_mu_2, p_mu_3: " + str((p_mu_2, p_mu_3)))
 
         cum_soft_max=p_mu_2*np.array(x_sa_mu_2)+\
                      p_mu_3*np.array(x_sa_mu_3)
@@ -230,18 +231,19 @@ class Agent:
         self.path_y.append(self.pos_y)
         self.episode+=1
 
-    def updates_weigts(self, reward, action):
+    def updates_weigts(self, action, enviroment):
+
 
         self.update_next_state(action)
+        reward=self.targets_collected[-1]-self.targets_collected[-2]
         print("current position: " +str((a1.pos_x, a1.pos_y)))
         print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
         x_s = self.feature_vector(self.pos_x, self.pos_y)
         x_s_prime = self.feature_vector(self.pos_x_prime, self.pos_y_prime)
         current_s = np.dot(x_s, self.weigths_vector)
         next_s = self.gamma * np.dot(x_s_prime, self.weigths_vector)
-
-        print("v_(S, w) : "  +str(current_s))
-        print("v_(S',w) : " + str(next_s))
+        # print("v_(S, w) : "  +str(current_s))
+        # print("v_(S',w) : " + str(next_s))
 
         if (self.episode+2 <=self.episodes):
 
@@ -268,6 +270,8 @@ class Agent:
             pass
 
         self.update_state()
+
+        self.targets_collected.append(env.collected_targets(self))
 
         return delta
 
@@ -300,7 +304,7 @@ L=10000
 T=50
 radius_detection=25
 freq_sampling=1
-episodes=20
+episodes=50
 
 
 targets=np.loadtxt('target_large.csv', delimiter=',')
@@ -313,11 +317,11 @@ a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
 env=Enviroment(L, target_location)
 #Learning block
 
-for j in range(1):
+for j in range(10):
 
     # Loop for episodes
 
-    for i in range(20):
+    for i in range(50):
 
         # Loop for one complete episode
 
@@ -325,9 +329,7 @@ for j in range(1):
         print("Episode: " + str(a1.episode))
         action = a1.sample_action()
         print("action " +str (action))
-        reward=4
-        a1.updates_weigts(reward, action)
-        print("targets : " + str(env.collected_targets(a1)))
+        a1.updates_weigts( action, env)
 
         # time.sleep(0)
 
@@ -335,7 +337,7 @@ for j in range(1):
 
 
 a1.plot_path(targets)
-
+a1.targets_collected
 
 
 
