@@ -8,7 +8,7 @@ import pickle
 import matplotlib.pyplot as plt
 import time
 from scipy.stats import pareto
-
+from scipy.stats import expon
 
 # generate targets.
 class Enviroment:
@@ -68,7 +68,7 @@ class Agent:
         self.center_lay2 = list(itertools.product(grid_line, grid_line))
         self.center_init = [(L/2, L/2)]
         self.centers = self.center_init + self.center_lay1 + self.center_lay2
-        self.weigths_vector = np.array([100] + len(self.center_lay1) * [100] + len(self.center_lay2) * [0])
+        self.weigths_vector = np.array([2] + len(self.center_lay1) * [2] + len(self.center_lay2) * [0])
         self.theta_mu_x_vector=  [0.1] + len(self.center_lay1) * [0.1] + len(self.center_lay2) * [0]
         self.theta_sd_x_vector = [0.01] + len(self.center_lay1) * [0.01] + len(self.center_lay2) * [0]
         self.theta_mu_y_vector = [0.01] + len(self.center_lay1) * [0.01] + len(self.center_lay2) * [0]
@@ -78,7 +78,7 @@ class Agent:
         self.radius_detection=radius_detection
         self.freq_sampling=freq_sampling
         self.cum_targets = 0
-        self.alpha = 0.1
+        self.alpha = 0.01
         self.gamma = 1
         self.time_step = 0
         self.episodes=episodes
@@ -176,6 +176,35 @@ class Agent:
 
         return (vel_x, vel_y)
 
+
+    def sample_action_levy(self):
+
+        alpha= self.parameter -1
+        V = np.random.uniform(-np.pi*0.5, 0.5 * np.pi, 1)[0]
+        W = expon.rvs(size=1)[0]
+
+        cop1=(np.sin(alpha*V))/((np.cos(V))**(1/alpha))
+        cop2=((np.cos((1-alpha)*V))/W)**(((1-alpha)/alpha))
+        elle=cop1*cop2
+
+        if elle<=0:
+
+            elle=min(500,-elle)
+
+        else:
+
+            elle=min(500, elle)
+
+        # print("Taking this value:  " + str(elle))
+
+        angle = np.random.uniform(0, 2 * np.pi, 1)[0]
+        # print("angle vel :" + str(angle))
+        vel_x = elle * np.cos(angle)
+        vel_y = elle * np.sin(angle)
+
+        return (vel_x, vel_y)
+
+
     def nabla_pi_sa(self):
 
         partial_x_sa = list(self.feature_vector(self.pos_x, self.pos_y))
@@ -236,8 +265,17 @@ class Agent:
 
         self.update_next_state(action)
         reward=self.targets_collected[-1]-self.targets_collected[-2]
-        print("current position: " +str((a1.pos_x, a1.pos_y)))
-        print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
+
+        if reward==0:
+
+            reward=-10
+
+        else:
+
+            pass
+
+        # print("current position: " +str((a1.pos_x, a1.pos_y)))
+        # print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
         x_s = self.feature_vector(self.pos_x, self.pos_y)
         x_s_prime = self.feature_vector(self.pos_x_prime, self.pos_y_prime)
         current_s = np.dot(x_s, self.weigths_vector)
@@ -298,59 +336,69 @@ class Agent:
         plt.plot(targets[:, 0], targets[:, 1], 'ko')
         plt.show()
 
-
 #Initialization values
 
-radius_coarse=750
-L=10000
-T=50
-radius_detection=25
-freq_sampling=1
-episodes=25
+if __name__ == "__main__":
+
+    n_targets=[]
+
+    for t in range(1):
+
+        print(" data poinnt ++++++ " +str(t) )
+
+        radius_coarse=750
+        L=10000
+        T=50
+        radius_detection=25
+        freq_sampling=1
+        episodes=500
+
+        targets=np.loadtxt('target_large.csv', delimiter=',')
+        target_location=[(targets[i,0],targets[i,1]) for i in range(targets.shape[0])]
+
+        # Define Agent object
+
+        a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
+
+        env=Enviroment(L, target_location)
+        #Learning block
+
+        scenarios=10
+
+        for j in range(scenarios):
+
+            # Loop for episodes
+
+            for i in range(episodes):
+
+                # Loop for one complete episode
+
+                # print("==============================")
+                print("Episode: " + str(a1.episode))
+                action = a1.sample_action_levy()
+                # print("action " +str (action))
+                a1.updates_weigts( action, env)
+
+                # time.sleep(0)
+
+            if j==(scenarios-1):
+
+                break
+
+            a1.reset_agent()
+
+        n_targets.append(a1.targets_collected[-1])
 
 
-targets=np.loadtxt('target_large.csv', delimiter=',')
-target_location=[(targets[i,0],targets[i,1]) for i in range(targets.shape[0])]
+    print(np.mean(n_targets))
+    print(np.std(n_targets))
 
-# Define Agent object
-
-a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
-
-env=Enviroment(L, target_location)
-#Learning block
-
-for j in range(10):
-
-    # Loop for episodes
-
-    for i in range(25):
-
-        # Loop for one complete episode
-
-        print("==============================")
-        print("Episode: " + str(a1.episode))
-        action = a1.sample_action()
-        print("action " +str (action))
-        a1.updates_weigts( action, env)
-
-        # time.sleep(0)
-    if j==9:
-
-        break
-
-    a1.reset_agent()
-
-
-a1.plot_path(targets)
-a1.targets_collected
-a1.path_y
-
-
-
-
-
-
-
+    #
+    a1.plot_path(targets)
+    a1.targets_collected[-1]
+    # a1.path_y
+    #
+    # a1.weigths_vector
 
 
 
