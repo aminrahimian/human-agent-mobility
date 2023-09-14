@@ -46,21 +46,25 @@ class Enviroment:
         agent_position=(p_x,p_y)
 
         cont=0
+        initial_range=len(self.target_location)
+        removal=set({})
+        list_target_location=list(self.target_location)
 
-        for i in self.target_location:
+        for i in range(initial_range):
 
-            if distance.euclidean(agent_position, i)<= agent.radius_detection:
+            if distance.euclidean(agent_position, list_target_location[i])<= agent.radius_detection:
 
-                self.target_location.remove(i)
+                removal.add(list_target_location[i])
                 cont+=1
-                print("One target found agent pos :" +str((agent_position))+
-                      " target at : " +str(i))
-
-                print("We have left " + str(len(self.target_location)))
 
             else:
 
                 pass
+
+        self.target_location=self.target_location.difference(removal)
+
+        if cont > 0:
+            print("Total targets : " + str(cont))
 
         return cont
 
@@ -89,7 +93,7 @@ class Agent:
         self.radius_detection=radius_detection
         self.freq_sampling=freq_sampling
         self.cum_targets = 0
-        self.alpha = 0.01
+        self.alpha = 0.5
         self.gamma = 1
         self.time_step = 0
         self.episodes=episodes
@@ -191,9 +195,8 @@ class Agent:
     def sample_action_levy(self):
 
         alpha= self.parameter -1
-        V = np.random.uniform(-np.pi*0.5, 0.5 * np.pi, 1)[0]
+        V = np.random.uniform(-np.pi*0.5, 0.5*np.pi, 1)[0]
         W = expon.rvs(size=1)[0]
-
         cop1=(np.sin(alpha*V))/((np.cos(V))**(1/alpha))
         cop2=((np.cos((1-alpha)*V))/W)**(((1-alpha)/alpha))
         elle=cop1*cop2
@@ -210,8 +213,8 @@ class Agent:
 
         angle = np.random.uniform(0, 2 * np.pi, 1)[0]
         # print("angle vel :" + str(angle))
-        vel_x = elle * np.cos(angle)
-        vel_y = elle * np.sin(angle)
+        vel_x = 10*elle * np.cos(angle)
+        vel_y = 10*elle * np.sin(angle)
 
         return (vel_x, vel_y)
 
@@ -283,7 +286,7 @@ class Agent:
 
         else:
 
-            pass
+            reward=100
 
         # print("current position: " +str((a1.pos_x, a1.pos_y)))
         # print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
@@ -320,7 +323,14 @@ class Agent:
 
         self.update_state()
 
-        self.targets_collected.append(env.collected_targets(self))
+        number_targets=env.collected_targets(self)
+
+        if number_targets>0:
+
+            print("Add to target collected list : " +str(number_targets) +
+                  "at :" +str((self.pos_x,self.pos_y)))
+
+        self.targets_collected.append(number_targets)
 
         return delta
 
@@ -371,7 +381,7 @@ if __name__ == "__main__":
     for j in range(scenarios):
 
         targets = np.loadtxt('target_large.csv', delimiter=',')
-        target_location = [(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])]
+        target_location = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
 
         env = Enviroment(L, target_location)
         # Loop for episodes
@@ -389,46 +399,14 @@ if __name__ == "__main__":
 
             # time.sleep(1)
 
+        n_targets.append(np.sum(a1.targets_collected))
+
         if j==(scenarios-1):
 
             break
 
         a1.reset_agent()
 
-        if j==1:
-
-            a=[j,a1.targets_collected[-1]]
-            np.savetxt("1_episode.csv", a, delimiter=",")
-
-        elif j==5:
-            a = [j, a1.targets_collected[-1]]
-            np.savetxt("5_episode.csv", a, delimiter=",")
-
-        elif j==10:
-
-            a = [j, a1.targets_collected[-1]]
-            np.savetxt("10_episode.csv", a, delimiter=",")
-
-        elif j==50:
-            a = [j, a1.targets_collected[-1]]
-            np.savetxt("50_episode.csv", a, delimiter=",")
-
-
-        elif j==100:
-            a = [j, a1.targets_collected[-1]]
-            np.savetxt("100_episode.csv", a, delimiter=",")
-
-        elif j==200:
-
-            a = [j, a1.targets_collected[-1]]
-            np.savetxt("200_episode.csv", a, delimiter=",")
-
-        elif j==250:
-
-            a = [j, a1.targets_collected[-1]]
-            np.savetxt("250_episode.csv", a, delimiter=",")
-
-        n_targets.append(a1.targets_collected[-1])
 
 
     # print(np.mean(n_targets))
@@ -441,16 +419,53 @@ if __name__ == "__main__":
     #
     # a1.weigths_vector
 
+    np.savetxt("n_targets_05.csv",n_targets , delimiter=",")
+
+    # x=list(range(len(n_targets)))
+
+
+    # plt.plot(x, n_targets,linestyle='dashed', linewidth = 1,
+    #      marker='x')
+    # # naming the x axis
+    # plt.xlabel('episode')
+    # # naming the y axis
+    # plt.ylabel('number of detected targets')
+    # plt.show()
 
 
 
-    x=list(range(len(n_targets)))
+# pol={(1699.0, 2058.1), (1523.6, 2102.2), (1791.3, 2280.3)}
+#
+# A=set({})
+# A.add((1699.0, 2058.1))
+# pol=pol.difference(A)
+#
+#
+#
+# for i in pol:
+#
+#     print(i)
 
+    mus=[]
+    sds=[]
 
-    plt.plot(x, n_targets)
-    # naming the x axis
-    plt.xlabel('x - axis')
+    for i in range(10):
+
+        mus.append(np.mean(n_targets[i*50: i*50+50]))
+        sds.append(np.std(n_targets[i*50: i*50+50]))
+
+    xx=np.arange(50,550,50)
+    means=np.array(mus)
+    stds=np.array(sds)
+    #some confidence interval
+    ci = 1.96 * stds/np.sqrt(50)
+    fig, ax = plt.subplots()
+    ax.plot(xx,means)
+    plt.xlabel('episode')
     # naming the y axis
-    plt.ylabel('y - axis')
+    plt.ylabel('average number detected targets')
+    plt.title('Learning rate: 0.5')
+    ax.fill_between(xx, (means-ci), (means+ci), color='b', alpha=.1)
+    plt.xlim(50, 550)
+    plt.ylim(0,5)
     plt.show()
-
