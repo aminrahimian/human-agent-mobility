@@ -41,17 +41,28 @@ class Enviroment:
         """ Return the number of targets given the historical
         position of the agent
         """
-        path_x = agent.path_x
-        path_y = agent.path_y
+        p_x = agent.pos_x
+        p_y = agent.pos_y
+        agent_position=(p_x,p_y)
 
-        agent_path=[(path_x[i], path_y[i]) for i in range(len(path_x))]
+        cont=0
 
-        target_combinations = list(itertools.product(agent_path, self.target_location))
+        for i in self.target_location:
 
-        target_dist = [distance.euclidean(target_combinations[i][0], target_combinations[i][1]) for i in
-                       range(len(target_combinations))]
+            if distance.euclidean(agent_position, i)<= agent.radius_detection:
 
-        return sum(np.array(target_dist) <= agent.radius_detection)
+                self.target_location.remove(i)
+                cont+=1
+                print("One target found agent pos :" +str((agent_position))+
+                      " target at : " +str(i))
+
+                print("We have left " + str(len(self.target_location)))
+
+            else:
+
+                pass
+
+        return cont
 
 class Agent:
 
@@ -68,7 +79,7 @@ class Agent:
         self.center_lay2 = list(itertools.product(grid_line, grid_line))
         self.center_init = [(L/2, L/2)]
         self.centers = self.center_init + self.center_lay1 + self.center_lay2
-        self.weigths_vector = np.array([2] + len(self.center_lay1) * [2] + len(self.center_lay2) * [0])
+        self.weigths_vector = np.array([0] + len(self.center_lay1) * [0] + len(self.center_lay2) * [0])
         self.theta_mu_x_vector=  [0.1] + len(self.center_lay1) * [0.1] + len(self.center_lay2) * [0]
         self.theta_sd_x_vector = [0.01] + len(self.center_lay1) * [0.01] + len(self.center_lay2) * [0]
         self.theta_mu_y_vector = [0.01] + len(self.center_lay1) * [0.01] + len(self.center_lay2) * [0]
@@ -264,7 +275,7 @@ class Agent:
 
 
         self.update_next_state(action)
-        reward=self.targets_collected[-1]-self.targets_collected[-2]
+        reward=self.targets_collected[-1]
 
         if reward==0:
 
@@ -342,56 +353,86 @@ if __name__ == "__main__":
 
     n_targets=[]
 
-    for t in range(1):
+    radius_coarse=750
+    L=10000
+    T=50
+    radius_detection=25
+    freq_sampling=1
+    episodes=1000
 
-        print(" data poinnt ++++++ " +str(t) )
+    # Define Agent object
 
-        radius_coarse=750
-        L=10000
-        T=50
-        radius_detection=25
-        freq_sampling=1
-        episodes=500
+    a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
 
-        targets=np.loadtxt('target_large.csv', delimiter=',')
-        target_location=[(targets[i,0],targets[i,1]) for i in range(targets.shape[0])]
+    #Learning block
 
-        # Define Agent object
+    scenarios=500
 
-        a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
+    for j in range(scenarios):
 
-        env=Enviroment(L, target_location)
-        #Learning block
+        targets = np.loadtxt('target_large.csv', delimiter=',')
+        target_location = [(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])]
 
-        scenarios=10
+        env = Enviroment(L, target_location)
+        # Loop for episodes
+        print("learning with  episode : " +str(j))
 
-        for j in range(scenarios):
+        for i in range(episodes):
 
-            # Loop for episodes
+            # Loop for one complete episode
 
-            for i in range(episodes):
+            # print("==============================")
+            # print("Episode: " + str(a1.episode))
+            action = a1.sample_action_levy()
+            # print("action " +str (action))
+            a1.updates_weigts( action, env)
 
-                # Loop for one complete episode
+            # time.sleep(1)
 
-                # print("==============================")
-                print("Episode: " + str(a1.episode))
-                action = a1.sample_action_levy()
-                # print("action " +str (action))
-                a1.updates_weigts( action, env)
+        if j==(scenarios-1):
 
-                # time.sleep(0)
+            break
 
-            if j==(scenarios-1):
+        a1.reset_agent()
 
-                break
+        if j==1:
 
-            a1.reset_agent()
+            a=[j,a1.targets_collected[-1]]
+            np.savetxt("1_episode.csv", a, delimiter=",")
+
+        elif j==5:
+            a = [j, a1.targets_collected[-1]]
+            np.savetxt("5_episode.csv", a, delimiter=",")
+
+        elif j==10:
+
+            a = [j, a1.targets_collected[-1]]
+            np.savetxt("10_episode.csv", a, delimiter=",")
+
+        elif j==50:
+            a = [j, a1.targets_collected[-1]]
+            np.savetxt("50_episode.csv", a, delimiter=",")
+
+
+        elif j==100:
+            a = [j, a1.targets_collected[-1]]
+            np.savetxt("100_episode.csv", a, delimiter=",")
+
+        elif j==200:
+
+            a = [j, a1.targets_collected[-1]]
+            np.savetxt("200_episode.csv", a, delimiter=",")
+
+        elif j==250:
+
+            a = [j, a1.targets_collected[-1]]
+            np.savetxt("250_episode.csv", a, delimiter=",")
 
         n_targets.append(a1.targets_collected[-1])
 
 
-    print(np.mean(n_targets))
-    print(np.std(n_targets))
+    # print(np.mean(n_targets))
+    # print(np.std(n_targets))
 
     #
     a1.plot_path(targets)
@@ -403,7 +444,13 @@ if __name__ == "__main__":
 
 
 
+    x=list(range(len(n_targets)))
 
 
-
+    plt.plot(x, n_targets)
+    # naming the x axis
+    plt.xlabel('x - axis')
+    # naming the y axis
+    plt.ylabel('y - axis')
+    plt.show()
 
