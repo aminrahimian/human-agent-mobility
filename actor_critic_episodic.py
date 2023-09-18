@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
 from scipy.stats import bernoulli
 import itertools
@@ -9,6 +10,7 @@ import matplotlib.pyplot as plt
 import time
 from scipy.stats import pareto
 from scipy.stats import expon
+from scipy.interpolate import NearestNDInterpolator
 
 # generate targets.
 class Enviroment:
@@ -101,7 +103,7 @@ class Agent:
         self.episode=0
         self.path_x=[self.pos_x]
         self.path_y=[self.pos_y]
-        self.targets_collected=[0,0]
+        self.targets_collected=[]
 
     def feature_vector(self, pos_x, pos_y):
 
@@ -154,6 +156,8 @@ class Agent:
         vel_y = norm.rvs(loc=action_mean_y, scale=action_sd_y, size=1)[0]
 
         return (vel_x, vel_y)
+
+
     def sample_parameter(self):
 
         #calculate h(s,a theta)
@@ -278,6 +282,8 @@ class Agent:
 
 
         self.update_next_state(action)
+        number_targets = env.collected_targets(self)
+        self.targets_collected.append(number_targets)
         reward=self.targets_collected[-1]
 
         if reward==0:
@@ -323,16 +329,24 @@ class Agent:
 
         self.update_state()
 
-        number_targets=env.collected_targets(self)
-
-        if number_targets>0:
-
-            print("Add to target collected list : " +str(number_targets) +
-                  "at :" +str((self.pos_x,self.pos_y)))
-
-        self.targets_collected.append(number_targets)
+        # number_targets=env.collected_targets(self)
+        #
+        # if number_targets>0:
+        #
+        #     print("Add to target collected list : " +str(number_targets) +
+        #           "at :" +str((self.pos_x,self.pos_y)))
+        #
+        # self.targets_collected.append(number_targets)
 
         return delta
+
+
+    def monte_carlo_update(self):
+
+
+
+        pass
+
 
     def reset_agent(self):
 
@@ -343,7 +357,7 @@ class Agent:
         self.episode=0
         self.path_x = [self.pos_x]
         self.path_y = [self.pos_y]
-        self.targets_collected=[0,0]
+        self.targets_collected=[]
 
     def plot_path(self,targets):
 
@@ -356,6 +370,8 @@ class Agent:
         plt.plot(a1.path_x, a1.path_y, '--o', color='#65C7F5')
         plt.plot(targets[:, 0], targets[:, 1], 'ko')
         plt.show()
+
+
 
 #Initialization values
 
@@ -376,7 +392,7 @@ if __name__ == "__main__":
 
     #Learning block
 
-    scenarios=500
+    scenarios=1
 
     for j in range(scenarios):
 
@@ -409,63 +425,49 @@ if __name__ == "__main__":
 
 
 
-    # print(np.mean(n_targets))
-    # print(np.std(n_targets))
-
-    #
     a1.plot_path(targets)
     a1.targets_collected[-1]
-    # a1.path_y
-    #
-    # a1.weigths_vector
-
-    np.savetxt("n_targets_05.csv",n_targets , delimiter=",")
-
-    # x=list(range(len(n_targets)))
 
 
-    # plt.plot(x, n_targets,linestyle='dashed', linewidth = 1,
-    #      marker='x')
-    # # naming the x axis
-    # plt.xlabel('episode')
-    # # naming the y axis
-    # plt.ylabel('number of detected targets')
-    # plt.show()
+    np.savetxt("n_targets_05_2k.csv",n_targets , delimiter=",")
 
 
+vector_x= np.linspace(start=0, stop=10000,endpoint=True ,num=2000)
+vector_y= np.linspace(start=0, stop=10000,endpoint=True ,num=2000)
 
-# pol={(1699.0, 2058.1), (1523.6, 2102.2), (1791.3, 2280.3)}
+a1.feature_vector(vector_x[0], vector_y[0])
+
+a1.weigths_vector
+
+# df = pd.DataFrame({'x':vector_x ,
+#                    'y': vector_y,
+#                    'z': v_hat})
 #
-# A=set({})
-# A.add((1699.0, 2058.1))
-# pol=pol.difference(A)
-#
-#
-#
-# for i in pol:
-#
-#     print(i)
+# df.to_csv("interpolation.csv",index=False)
 
-    mus=[]
-    sds=[]
+# but those can be array_like structures too, in which case the
+# result will be a matrix representing the values in the grid
+# specified by those arguments
 
-    for i in range(10):
+targets = np.loadtxt('target_large.csv', delimiter=',')
+x_t=targets[:,0]
+y_t=targets[:,1]
 
-        mus.append(np.mean(n_targets[i*50: i*50+50]))
-        sds.append(np.std(n_targets[i*50: i*50+50]))
+rng = np.random.default_rng()
+x = 10000 *np.random.uniform(0,1,2000)
+y = 10000 *np.random.uniform(0,1,2000)
+z=[np.dot(a1.weigths_vector,a1.feature_vector(vector_x[i], vector_y[i])) for i in range(2000)]
+X = np.linspace(min(x), max(x))
+Y = np.linspace(min(y), max(y))
+X, Y = np.meshgrid(X, Y)  # 2D grid for interpolation
+interp = NearestNDInterpolator(list(zip(x, y)), z)
+Z = interp(X, Y)
+plt.pcolormesh(X, Y, Z, shading='auto')
+plt.plot(x_t, y_t, "ok", label="input point", color="red")
+# plt.legend()
+plt.colorbar()
+plt.axis("equal")
+plt.show()
 
-    xx=np.arange(50,550,50)
-    means=np.array(mus)
-    stds=np.array(sds)
-    #some confidence interval
-    ci = 1.96 * stds/np.sqrt(50)
-    fig, ax = plt.subplots()
-    ax.plot(xx,means)
-    plt.xlabel('episode')
-    # naming the y axis
-    plt.ylabel('average number detected targets')
-    plt.title('Learning rate: 0.5')
-    ax.fill_between(xx, (means-ci), (means+ci), color='b', alpha=.1)
-    plt.xlim(50, 550)
-    plt.ylim(0,5)
-    plt.show()
+
+R=a1.targets_collected
