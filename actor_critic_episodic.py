@@ -251,6 +251,34 @@ class Agent:
 
         return  nabla
 
+    def nabla_pi_sa_II(self, pos_x, pos_y):
+
+        partial_x_sa = list(self.feature_vector(pos_x, pos_y))
+        zeros_x_sa = len(partial_x_sa) * [0]
+        x_sa_mu_2 = partial_x_sa + zeros_x_sa
+        x_sa_mu_3 = zeros_x_sa + partial_x_sa
+
+        h_mu_2 = np.dot(self.theta, x_sa_mu_2)
+        h_mu_3 = np.dot(self.theta, x_sa_mu_3)
+
+        p_mu_2 = np.exp(h_mu_2) / (np.exp(h_mu_2) + np.exp(h_mu_3))
+        p_mu_3 = 1 - p_mu_2
+
+        # print("p_mu_2, p_mu_3: " + str((p_mu_2, p_mu_3)))
+
+        cum_soft_max = p_mu_2 * np.array(x_sa_mu_2) + \
+                       p_mu_3 * np.array(x_sa_mu_3)
+
+        if self.parameter == 2:
+
+            nabla = x_sa_mu_2 - cum_soft_max
+
+        else:
+
+            nabla = x_sa_mu_3 - cum_soft_max
+
+        return nabla
+
     def update_next_state(self,action):
 
         vel_x=action[0]
@@ -280,9 +308,8 @@ class Agent:
 
     def updates_weigts(self, action, enviroment):
 
-
         self.update_next_state(action)
-        number_targets = env.collected_targets(self)
+        number_targets = enviroment.collected_targets(self)
         self.targets_collected.append(number_targets)
         reward=self.targets_collected[-1]
 
@@ -343,9 +370,35 @@ class Agent:
 
     def monte_carlo_update(self):
 
+        mc_path_x = self.path_x[0:self.episodes]
+        mc_path_y = self.path_y[0:self.episodes]
+
+        R=[]
+
+        for i in self.targets_collected:
+
+            if i>0:
+
+                R.append(100)
+
+            else:
+
+                R.append(-10)
 
 
-        pass
+        mc_path_y.reverse()
+        mc_path_x.reverse()
+        R.reverse()
+
+        G=0
+
+        for i in range(len(R)):
+
+            G+=R[i]
+            self.theta = self.theta + \
+                         self.alpha * G * self.nabla_pi_sa_II(mc_path_x[i],
+                                                              mc_path_y[i])
+
 
 
     def reset_agent(self):
@@ -370,7 +423,6 @@ class Agent:
         plt.plot(a1.path_x, a1.path_y, '--o', color='#65C7F5')
         plt.plot(targets[:, 0], targets[:, 1], 'ko')
         plt.show()
-
 
 
 #Initialization values
