@@ -62,21 +62,21 @@ class Agent:
 
     def __init__(self):
 
-        self.pos_x=0
-        self.pos_y=0
-        L=10000
+        self.L= 10000
+        self.pos_x=self.L/2
+        self.pos_y=self.L/2
         grid_line = 1000 * np.arange(0, 12, 2)
         self.center_lay1 = list(itertools.product(grid_line, grid_line))
         self.center_lay2 = list(itertools.product(grid_line, grid_line))
-        self.center_init = [(L/2, L/2)]
+        self.center_init = [(self.L/2, self.L/2)]
         self.centers = self.center_init + self.center_lay1
         self.alpha=1e-4
         self.weights= np.array([0] + len(self.center_lay1) * [0] +
                                [0] + len(self.center_lay1) * [0])
         self.t=2
         self.T=1000
-        self.path_x = [self.pos_x]
-        self.path_y = [self.pos_y]
+        self.path_x = []
+        self.path_y = []
         self.epsilon=0.1
         self.radius_coarse=1500
 
@@ -175,14 +175,14 @@ class Agent:
 
         return mu
 
-    def next_position(self, mu, pos_x, pos_y, lenght_step):
+    def next_position(self, mu, pos_x, pos_y):
 
         lenght_step=self.sample_step_length(mu)
 
         angle = np.random.uniform(0, 2 * np.pi, 1)[0]
         # print("angle vel :" + str(angle))
-        vel_x = 10 * lenght_step * np.cos(angle)
-        vel_y = 10 * lenght_step * np.sin(angle)
+        vel_x =  lenght_step * np.cos(angle)
+        vel_y =  lenght_step * np.sin(angle)
 
         pos_x_prime = pos_x + vel_x * 1
         pos_y_prime = pos_y + vel_y * 1
@@ -201,6 +201,22 @@ class Agent:
 
         return (pos_x_prime, pos_y_prime)
 
+    def update_agent_state(self, new_position):
+
+        self.path_x.append(self.pos_x)
+        self.path_y.append(self.pos_y)
+        self.pos_x=new_position[0]
+        self.pos_y=new_position[1]
+        self.t+=1
+
+    def reset_agent(self):
+
+        self.pos_x = self.L / 2
+        self.pos_y = self.L / 2
+        self.t = 0
+        self.path_x = []
+        self.path_y = []
+
 
 targets_coord=generate_targets()
 
@@ -212,4 +228,5 @@ e1=Enviroment(targets_coord)
 agent=Agent()
 
 mu=agent.epsilon_greedy_policy(5000, 7500)
-mu
+
+agent.next_position(5000, 5000, mu)
