@@ -73,12 +73,12 @@ class Agent:
         self.alpha=1e-4
         self.weights= np.array([0] + len(self.center_lay1) * [0] +
                                [0] + len(self.center_lay1) * [0])
-        self.t=0
+        self.t=2
         self.T=1000
         self.path_x = [self.pos_x]
         self.path_y = [self.pos_y]
         self.epsilon=0.1
-        self.radius_coarse=25
+        self.radius_coarse=1500
 
 
     def feature_vector(self, pos_x, pos_y, action):
@@ -99,6 +99,8 @@ class Agent:
 
         else:
 
+            print(" time step diff from initial")
+
             actual_pos = len(self.center_lay1) * [(pos_x, pos_y)]
             iter = len(self.center_lay1)
             distances = np.array([distance.euclidean(self.center_lay1[i], actual_pos[i]) for i in range(iter)])
@@ -113,7 +115,7 @@ class Agent:
 
             else:
 
-                feature_vector = np.array(zeros + inside_circle_1)
+                feature_vector = np.array(zeros + inside_circle)
 
         return feature_vector
 
@@ -153,7 +155,13 @@ class Agent:
         :return: parameter mu of levy distribution
         """
         actions=[2,3]
-        q_values=np.array([np.dot(self.feature_vector(pos_x,pos_y,i),self.weights) for i in actions])
+
+        feature_mu2=self.feature_vector(pos_x, pos_y,actions[0])
+        feature_mu3=self.feature_vector(pos_x, pos_y,actions[1])
+
+        q_values=[np.dot(self.weights,feature_mu2), np.dot(self.weights,feature_mu3)]
+
+        print("q values :" +str(q_values))
         sample_uniform=np.random.uniform(0, 1,1)[0]
 
         if sample_uniform>=self.epsilon:
@@ -167,12 +175,41 @@ class Agent:
 
         return mu
 
+    def next_position(self, mu, pos_x, pos_y, lenght_step):
 
+        lenght_step=self.sample_step_length(mu)
+
+        angle = np.random.uniform(0, 2 * np.pi, 1)[0]
+        # print("angle vel :" + str(angle))
+        vel_x = 10 * lenght_step * np.cos(angle)
+        vel_y = 10 * lenght_step * np.sin(angle)
+
+        pos_x_prime = pos_x + vel_x * 1
+        pos_y_prime = pos_y + vel_y * 1
+
+        if pos_x_prime > self.L:
+            pos_x_prime = 2 * self.L - pos_x_prime
+
+        if pos_x_prime < 0:
+            self.pos_x_prime = -1 * pos_x_prime
+
+        if pos_y_prime > self.L:
+            pos_y_prime = 2 * self.L - pos_y_prime
+
+        if pos_y_prime < 0:
+            pos_y_prime = -1 * pos_y_prime
+
+        return (pos_x_prime, pos_y_prime)
 
 
 targets_coord=generate_targets()
 
 
 e1=Enviroment(targets_coord)
-e1.plot_target()
+# e1.plot_target()
 
+
+agent=Agent()
+
+mu=agent.epsilon_greedy_policy(5000, 7500)
+mu
