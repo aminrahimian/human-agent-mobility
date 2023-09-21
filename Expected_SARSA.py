@@ -69,45 +69,69 @@ class Agent:
         self.center_lay1 = list(itertools.product(grid_line, grid_line))
         self.center_lay2 = list(itertools.product(grid_line, grid_line))
         self.center_init = [(L/2, L/2)]
-        self.centers = self.center_init + self.center_lay1 + self.center_lay2
+        self.centers = self.center_init + self.center_lay1
         self.alpha=1e-4
-        self.weights= np.array([0] + len(self.center_lay1) * [0] + len(self.center_lay2) * [0])
+        self.weights= np.array([0] + len(self.center_lay1) * [0] )
+        self.t=0
+        self.T=1000
+        self.path_x = [self.pos_x]
+        self.path_y = [self.pos_y]
+        self.epsilon=0.1
 
 
-    def feature_vector(self, pos_x, pos_y):
+    def feature_vector(self, pos_x, pos_y, action):
 
         pass
 
-    def sample_step_length(self):
+    def sample_step_length(self, mu):
 
-        self.A.append(self.sample_parameter())
-        alpha = self.parameter - 1
+        alpha = mu - 1
         V = np.random.uniform(-np.pi * 0.5, 0.5 * np.pi, 1)[0]
         W = expon.rvs(size=1)[0]
         cop1 = (np.sin(alpha * V)) / ((np.cos(V)) ** (1 / alpha))
         cop2 = ((np.cos((1 - alpha) * V)) / W) ** (((1 - alpha) / alpha))
-        elle = cop1 * cop2
+        l = cop1 * cop2
 
-        if elle <= 0:
+        if l <= 0:
 
-            elle = min(500, -elle)
+            l = min(500, -l)
 
         else:
 
-            elle = min(500, elle)
+            l = min(500, l)
 
         # print("Taking this value:  " + str(elle))
 
-        angle = np.random.uniform(0, 2 * np.pi, 1)[0]
-        # print("angle vel :" + str(angle))
-        vel_x = 10 * elle * np.cos(angle)
-        vel_y = 10 * elle * np.sin(angle)
+        # angle = np.random.uniform(0, 2 * np.pi, 1)[0]
+        # # print("angle vel :" + str(angle))
+        # vel_x = 10 * elle * np.cos(angle)
+        # vel_y = 10 * elle * np.sin(angle)
 
-        return (vel_x, vel_y)
+        return 10*l
 
+    def epsilon_greedy_policy(self, pos_x, pos_y):
 
+        """
+        Return an action [a] considering the q(s,a) chosing max{q(s,a)}
+        with probability 1-epsilon
+        :param pos_x: position x
+        :param pos_y: position y
+        :return: parameter mu of levy distribution
+        """
+        actions=[2,3]
+        q_values=np.array([np.dot(self.feature_vector(pos_x,pos_y,i),self.weights) for i in actions])
+        sample_uniform=np.random.uniform(0, 1,1)[0]
 
+        if sample_uniform>=self.epsilon:
 
+            index_max=np.argmax(q_values)
+            mu=actions[index_max]
+
+        else:
+
+            mu=np.random.choice(np.array(actions))
+
+        return mu
 
 
 targets_coord=generate_targets()
