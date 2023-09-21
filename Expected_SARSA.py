@@ -71,17 +71,51 @@ class Agent:
         self.center_init = [(L/2, L/2)]
         self.centers = self.center_init + self.center_lay1
         self.alpha=1e-4
-        self.weights= np.array([0] + len(self.center_lay1) * [0] )
+        self.weights= np.array([0] + len(self.center_lay1) * [0] +
+                               [0] + len(self.center_lay1) * [0])
         self.t=0
         self.T=1000
         self.path_x = [self.pos_x]
         self.path_y = [self.pos_y]
         self.epsilon=0.1
+        self.radius_coarse=25
 
 
     def feature_vector(self, pos_x, pos_y, action):
 
-        pass
+        zeros = [0] + len(self.center_lay1) * [0]
+
+        if self.t==0:
+
+            feature_vector = [1] + len(self.center_lay1) * [0]
+
+            if action==2:
+
+                feature_vector=np.array(feature_vector+zeros)
+
+            else:
+
+                feature_vector=np.array(zeros+ feature_vector)
+
+        else:
+
+            actual_pos = len(self.center_lay1) * [(pos_x, pos_y)]
+            iter = len(self.center_lay1)
+            distances = np.array([distance.euclidean(self.center_lay1[i], actual_pos[i]) for i in range(iter)])
+            inside_circle_1 = (distances <= self.radius_coarse)
+            inside_circle_1 = list(inside_circle_1.astype(int))
+
+            inside_circle = [0] + inside_circle_1
+
+            if action==2:
+
+                feature_vector = np.array(inside_circle + zeros)
+
+            else:
+
+                feature_vector = np.array(zeros + inside_circle_1)
+
+        return feature_vector
 
     def sample_step_length(self, mu):
 
@@ -132,6 +166,8 @@ class Agent:
             mu=np.random.choice(np.array(actions))
 
         return mu
+
+
 
 
 targets_coord=generate_targets()
