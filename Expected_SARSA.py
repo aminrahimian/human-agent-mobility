@@ -97,7 +97,7 @@ class Enviroment:
 
 class Agent:
 
-    def __init__(self,T):
+    def __init__(self,T,load_weights):
 
         self.L= 10000
         self.pos_x=self.L/2
@@ -109,13 +109,21 @@ class Agent:
         self.centers = self.center_init + self.center_lay1
         self.alpha=0.1
 
+        if load_weights:
+
+            self.weights = np.loadtxt('weights_SARSA.csv', delimiter=',')
+
+        else:
+
+            self.weights = np.array([0] + len(self.center_lay1) * [0] +
+                                    [-1] + len(self.center_lay1) * [-1])
+
         # when no data
-        self.weights = np.array([0] + len(self.center_lay1) * [0] +
-                               [-1] + len(self.center_lay1) * [-1])
+
 
         # when data is available
 
-        # self.weights = np.loadtxt('weights_SARSA.csv', delimiter=',')
+        #
 
         # when simulation
 
