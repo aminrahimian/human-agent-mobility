@@ -411,9 +411,9 @@ class Agent:
 if __name__ == "__main__":
 
     T=1000
-    agent=Agent(T)
-    iterations=10
-
+    load_weights = True
+    agent=Agent(T,load_weights)
+    iterations=1
     agent.episodic_sarsa(iterations)
     agent.plot_heat_map()
 
