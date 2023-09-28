@@ -97,7 +97,7 @@ class Enviroment:
 
 class Agent:
 
-    def __init__(self,T,load_weights):
+    def __init__(self,T,load_weights, simulation):
 
         self.L= 10000
         self.pos_x=self.L/2
@@ -118,20 +118,16 @@ class Agent:
             self.weights = np.array([0] + len(self.center_lay1) * [0] +
                                     [-1] + len(self.center_lay1) * [-1])
 
-        # when no data
-
-
-        # when data is available
-
-        #
-
         # when simulation
+        if simulation:
 
-        # self.t=0
+            self.t=0
 
+        else:
+
+            self.t=10
         #when ploting
 
-        self.t=0
         self.T=T
         self.path_x = []
         self.path_y = []
@@ -248,7 +244,7 @@ class Agent:
     def q_val_ratio(self, pos_x, pos_y):
 
         # feature_mu2 = self.feature_vector(pos_x, pos_y,2)
-        feature_mu3 = self.feature_vector(pos_x, pos_y, 3)
+        feature_mu3 = self.feature_vector(pos_x, pos_y, 2)
 
         # q_u_2=np.dot(self.weights, feature_mu2)
         q_u_3=np.dot(self.weights, feature_mu3)
@@ -305,6 +301,24 @@ class Agent:
             current_q_hat = np.dot(self.feature_vector(pos_x, pos_y, current_action), self.weights)
             nabla_q_hat = self.feature_vector(pos_x, pos_y, current_action)
             delta = self.alpha * (reward  - current_q_hat)
+            self.weights = self.weights + delta * nabla_q_hat
+
+    def update_weights_q_learning(self, pos_x, pos_y, pos_x_prime, pos_y_prime, current_action,
+                       next_action, reward):
+
+        if not self.terminal_state:
+
+            next_q_hat = np.dot(self.feature_vector(pos_x_prime, pos_y_prime, next_action), self.weights)
+            current_q_hat = np.dot(self.feature_vector(pos_x, pos_y, current_action), self.weights)
+            nabla_q_hat = self.feature_vector(pos_x, pos_y, current_action)
+            delta = self.alpha * (reward + next_q_hat - current_q_hat)
+            self.weights = self.weights + delta * nabla_q_hat
+
+        else:
+
+            current_q_hat = np.dot(self.feature_vector(pos_x, pos_y, current_action), self.weights)
+            nabla_q_hat = self.feature_vector(pos_x, pos_y, current_action)
+            delta = self.alpha * (reward - current_q_hat)
             self.weights = self.weights + delta * nabla_q_hat
 
     def update_agent_state(self, pos_x_prime, pos_y_prime):
@@ -412,9 +426,10 @@ if __name__ == "__main__":
 
     T=1000
     load_weights = True
-    agent=Agent(T,load_weights)
+    simulation = False
+    agent=Agent(T,load_weights, simulation)
     iterations=1
-    agent.episodic_sarsa(iterations)
+    # agent.episodic_sarsa(iterations)
     agent.plot_heat_map()
 
 
