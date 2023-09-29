@@ -74,20 +74,24 @@ class Enviroment:
 
 class Agent:
 
-    def __init__(self, T, load_weights, simulation):
+    def __init__(self, T, load_table, simulation):
 
         self.L = 10000
         self.pos_x = self.L / 2
         self.pos_y = self.L / 2
         self.alpha = 0.1
-        if load_weights:
+        self.width_cell = 25
+        n_cells = int(np.floor(self.L / self.width_cell))
 
-            self.weights = np.loadtxt('weights_SARSA.csv', delimiter=',')
+        if load_table:
+
+            self.dict_tabular  = np.loadtxt('weights_SARSA.csv', delimiter=',')
 
         else:
 
-            self.weights = np.array([0] + len(self.center_lay1) * [0] +
-                                    [-1] + len(self.center_lay1) * [-1])
+            self.dict_tabular = {0: np.zeros((1,2)),
+                                 1: np.zeros((n_cells, n_cells, 2)),
+                                 2: np.zeros((n_cells, n_cells, 2))}
 
         # when simulation
         if simulation:
@@ -106,16 +110,36 @@ class Agent:
         # define these parameters carefully
         self.radius_detection = 25
         self.terminal_state = False
-        self.width_cell = 25
-        n_cells = int(np.floor(self.L / self.width_cell))
 
-        self.dict_tabular = {0: np.eye(1),
-                             1: np.eye(10),
-                             2: np.eye(0)}
 
+    def q_value(self, pos_x, pos_y, action):
+
+        index_x = int(np.floor(pos_x / self.width_cell))
+        index_y = int(np.floor(pos_y / self.width_cell))
+
+        if not self.terminal_state:
+
+            if self.t==0:
+
+                return self.dict_tabular[0][action]
+
+            else:
+
+                return self.dict_tabular[1][index_x, index_y, action]
+
+        else:
+
+            return 0
 
 
 
 
 #####
+
+
+load_table=False
+simulation=True
+agent=Agent(1000,load_table, simulation)
+
+agent.dict_tabular[1][0,1,1]=10
 
