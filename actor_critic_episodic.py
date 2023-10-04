@@ -92,8 +92,8 @@ class Agent:
         self.c = self.c_0 + self.c_1 + self.c_2
         self.w = np.array(len(self.c)*[0])
         self.theta_mu = np.array(len(self.c)*[0] + len(self.c)*[0])
-        self.theta_mean_alpha = np.array(len(self.c) * [0])
-        self.theta_sd_alpha = np.array(len(self.c) * [1])  # an approximation of 1 standard deviation
+        self.theta_mean_beta = np.array(len(self.c) * [0])
+        self.theta_sd_beta = np.array(len(self.c) * [1])  # an approximation of 1 standard deviation
 
         #---------------------------------------------------------------
 
@@ -199,9 +199,9 @@ class Agent:
 
         return p_mu_2
 
-    def sample_action_levy(self):
+    def sample_action_levy(self, pos_x, pos_y):
 
-        self.A.append(self.sample_parameter())
+        self.A.append(self.sample_parameter(pos_x, pos_y))
         alpha= self.parameter -1
         V = np.random.uniform(-np.pi*0.5, 0.5*np.pi, 1)[0]
         W = expon.rvs(size=1)[0]
@@ -211,20 +211,22 @@ class Agent:
 
         if elle<=0:
 
-            elle=min(500,-elle)
+            elle = 10*min(500,-1*elle)
+            step_l = max(25, elle)
 
         else:
 
-            elle=min(500, elle)
+            elle = 10*min(500, elle)
+            step_l = max(25, elle)
 
         # print("Taking this value:  " + str(elle))
 
-        angle = np.random.uniform(0, 2 * np.pi, 1)[0]
+        # angle = np.random.uniform(0, 2 * np.pi, 1)[0]
         # print("angle vel :" + str(angle))
-        vel_x = 10*elle * np.cos(angle)
-        vel_y = 10*elle * np.sin(angle)
+        # vel_x = 10*elle * np.cos(angle)
+        # vel_y = 10*elle * np.sin(angle)
 
-        return (vel_x, vel_y)
+        return step_l
 
     def nabla_pi_sa(self):
 
@@ -370,9 +372,9 @@ class Agent:
 
         return delta
 
-    def generate_one_step(self,action, enviroment):
+    def generate_one_step(self,mu,beta,enviroment):
 
-        self.update_next_state(action)
+        self.update_next_state(mu)
 
         # print("current position: " +str((a1.pos_x, a1.pos_y)))
         # print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
@@ -384,35 +386,6 @@ class Agent:
 
 
         return 1
-
-    def monte_carlo_update(self):
-
-        mc_path_x = self.path_x[0:self.episodes]
-        mc_path_y = self.path_y[0:self.episodes]
-
-        R=[]
-
-        for i in self.targets_collected:
-
-            if i>0:
-
-                R.append(1000)
-
-            else:
-
-                R.append(-10)
-
-        # time.sleep(3)
-
-
-        for i in range(len(R)):
-
-            self.episode=i
-            G=np.sum(R[0:i+1])
-            # print("G value  " + str(G))
-            self.theta = self.theta + \
-                         self.alpha * G * self.nabla_pi_sa_II(mc_path_x[i],
-                                                              mc_path_y[i],self.A[i])
 
     def reset_agent(self):
 
