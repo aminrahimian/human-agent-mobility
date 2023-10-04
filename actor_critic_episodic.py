@@ -11,6 +11,7 @@ import time
 from scipy.stats import pareto
 from scipy.stats import expon
 from scipy.interpolate import NearestNDInterpolator
+import random
 
 # generate targets.
 class Enviroment:
@@ -72,7 +73,7 @@ class Enviroment:
 
 class Agent:
 
-    def __init__(self, radius_coarse, L, T,radius_detection, freq_sampling,episodes):
+    def __init__(self, radius_coarse, L, T,radius_detection):
 
         self.L = L
         self.T = T
@@ -80,26 +81,30 @@ class Agent:
         self.pos_y = L/2
         self.pos_x_prime=L/2
         self.pos_y_prime=L/2
-        grid_line = 1000 * np.arange(0.5, 10.5, 1)
-        self.center_lay1 = list(itertools.product(grid_line, grid_line))
-        self.center_lay2 = list(itertools.product(grid_line, grid_line))
-        self.center_init = [(L/2, L/2)]
-        self.centers = self.center_init + self.center_lay1 + self.center_lay2
-        self.weigths_vector = np.array([0] + len(self.center_lay1) * [0] + len(self.center_lay2) * [0])
-        self.theta_mu_x_vector=  [0.1] + len(self.center_lay1) * [0.1] + len(self.center_lay2) * [0]
-        self.theta_sd_x_vector = [0.01] + len(self.center_lay1) * [0.01] + len(self.center_lay2) * [0]
-        self.theta_mu_y_vector = [0.01] + len(self.center_lay1) * [0.01] + len(self.center_lay2) * [0]
-        self.theta_sd_y_vector = [0.01] + len(self.center_lay1) * [0.01] + len(self.center_lay2) * [0]
-        self.theta=self.theta_mu_x_vector+self.theta_mu_x_vector
+
+        # centers of the circles for coarse coding
+        # center each 1000 m ------------------------------------------
+
+        coarse_centers = 1000 * np.arange(0,11,1)
+        self.c_1 = list(itertools.product(coarse_centers, coarse_centers))
+        self.c_2 = list(itertools.product(coarse_centers, coarse_centers))
+        self.c_0 = [(L / 2, L / 2)]
+        self.c = self.c_0 + self.c_1 + self.c_2
+        self.w = np.array(len(self.c)*[0])
+        self.theta_mu = np.array(len(self.c)*[0] + len(self.c)*[0])
+        self.theta_mean_alpha = np.array(len(self.c) * [0])
+        self.theta_sd_alpha = np.array(len(self.c) * [1])  # an approximation of 1 standard deviation
+
+        #---------------------------------------------------------------
+
         self.radius_coarse = radius_coarse
         self.radius_detection=radius_detection
-        self.freq_sampling=freq_sampling
         self.cum_targets = 0
-        self.alpha = 0.5
+        self.alpha = 1e-5
         self.gamma = 1
         self.time_step = 0
-        self.episodes=episodes
         self.parameter=2
+        self.A=[]
         self.episode=0
         self.path_x=[self.pos_x]
         self.path_y=[self.pos_y]
@@ -112,10 +117,10 @@ class Agent:
             inside_circle = np.array([1] + len(self.center_lay1) * [0] + len(self.center_lay2) * [0])
             # print(" init state")
 
-        elif (self.episode>0) & (self.episode+1<=self.episodes):
+        elif (self.episode>0) & (self.episode+1<=self.T):
 
             # print(">1")
-            actual_pos = len(self.center_lay1) * [(pos_x, pos_y)]
+            actual_pos = len(self.c_1) * [(pos_x, pos_y)]
             iter = len(self.center_lay1)
             distances = np.array([distance.euclidean(self.center_lay1[i], actual_pos[i]) for i in range(iter)])
             inside_circle_1 = (distances <= self.radius_coarse)
@@ -126,7 +131,7 @@ class Agent:
 
         else:
 
-            print("Final grid ")
+            # print("Final grid ")
             actual_pos = len(self.center_lay1) * [(pos_x, pos_y)]
             iter = len(self.center_lay1)
             distances = np.array([distance.euclidean(self.center_lay1[i], actual_pos[i]) for i in range(iter)])
@@ -157,34 +162,42 @@ class Agent:
 
         return (vel_x, vel_y)
 
-
-    def sample_parameter(self):
+    def sample_parameter(self, pos_x, pos_y):
 
         #calculate h(s,a theta)
 
-        partial_x_sa=list(self.feature_vector(self.pos_x, self.pos_y))
+        partial_x_sa=list(self.feature_vector(pos_x, pos_y))
         zeros_x_sa=len(partial_x_sa)*[0]
         x_sa_mu_2 = partial_x_sa + zeros_x_sa
         x_sa_mu_3 =  zeros_x_sa + partial_x_sa
-        h_mu_2 = np.dot(self.theta, x_sa_mu_2)
-        h_mu_3 = np.dot(self.theta, x_sa_mu_3)
+        h_mu_2 = np.dot(self.theta_mu, x_sa_mu_2)
+        h_mu_3 = np.dot(self.theta_mu, x_sa_mu_3)
         p_mu_2 = np.exp(h_mu_2)/(np.exp(h_mu_2) +np.exp(h_mu_3))
 
         # print("Probability of u_2 : " +str(p_mu_2))
 
-        is_mu_2=bernoulli.rvs(p_mu_2, size=1)[0]
+        self.parameter=random.choices([2,3], weights=[p_mu_2, 1-p_mu_2], k=1)[0]
 
-        if is_mu_2==1:
+        return self.parameter
 
-            self.parameter=2
+    def probability_actions(self, pos_x, pos_y):
 
-        else:
+        partial_x_sa = list(self.feature_vector(pos_x, pos_y))
+        zeros_x_sa = len(partial_x_sa) * [0]
+        x_sa_mu_2 = partial_x_sa + zeros_x_sa
+        x_sa_mu_3 = zeros_x_sa + partial_x_sa
+        h_mu_2 = np.dot(self.theta, x_sa_mu_2)
+        h_mu_3 = np.dot(self.theta, x_sa_mu_3)
 
-            self.parameter=3
+        print("Weights for u2 and u3 " + str((h_mu_2, h_mu_3)))
+
+        p_mu_2 = np.exp(h_mu_2) / (np.exp(h_mu_2) + np.exp(h_mu_3))
+
+        return p_mu_2
 
     def sample_action(self):
 
-        self.sample_parameter()
+        self.A.append(self.sample_parameter())
         mu=self.parameter-1
 
         l=pareto.rvs(mu, scale=250,size=1)[0]
@@ -195,9 +208,9 @@ class Agent:
 
         return (vel_x, vel_y)
 
-
     def sample_action_levy(self):
 
+        self.A.append(self.sample_parameter())
         alpha= self.parameter -1
         V = np.random.uniform(-np.pi*0.5, 0.5*np.pi, 1)[0]
         W = expon.rvs(size=1)[0]
@@ -221,7 +234,6 @@ class Agent:
         vel_y = 10*elle * np.sin(angle)
 
         return (vel_x, vel_y)
-
 
     def nabla_pi_sa(self):
 
@@ -251,7 +263,7 @@ class Agent:
 
         return  nabla
 
-    def nabla_pi_sa_II(self, pos_x, pos_y):
+    def nabla_pi_sa_II(self, pos_x, pos_y, action):
 
         partial_x_sa = list(self.feature_vector(pos_x, pos_y))
         zeros_x_sa = len(partial_x_sa) * [0]
@@ -269,11 +281,11 @@ class Agent:
         cum_soft_max = p_mu_2 * np.array(x_sa_mu_2) + \
                        p_mu_3 * np.array(x_sa_mu_3)
 
-        if self.parameter == 2:
+        if action == 2:
 
             nabla = x_sa_mu_2 - cum_soft_max
 
-        else:
+        elif action==3:
 
             nabla = x_sa_mu_3 - cum_soft_max
 
@@ -367,6 +379,20 @@ class Agent:
 
         return delta
 
+    def generate_one_step(self,action, enviroment):
+
+        self.update_next_state(action)
+
+        # print("current position: " +str((a1.pos_x, a1.pos_y)))
+        # print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
+
+        self.update_state()
+
+        number_targets = enviroment.collected_targets(self)
+        self.targets_collected.append(number_targets)
+
+
+        return 1
 
     def monte_carlo_update(self):
 
@@ -379,27 +405,23 @@ class Agent:
 
             if i>0:
 
-                R.append(100)
+                R.append(1000)
 
             else:
 
                 R.append(-10)
 
+        # time.sleep(3)
 
-        mc_path_y.reverse()
-        mc_path_x.reverse()
-        R.reverse()
-
-        G=0
 
         for i in range(len(R)):
 
-            G+=R[i]
+            self.episode=i
+            G=np.sum(R[0:i+1])
+            # print("G value  " + str(G))
             self.theta = self.theta + \
                          self.alpha * G * self.nabla_pi_sa_II(mc_path_x[i],
-                                                              mc_path_y[i])
-
-
+                                                              mc_path_y[i],self.A[i])
 
     def reset_agent(self):
 
@@ -411,6 +433,7 @@ class Agent:
         self.path_x = [self.pos_x]
         self.path_y = [self.pos_y]
         self.targets_collected=[]
+        self.A = []
 
     def plot_path(self,targets):
 
@@ -431,7 +454,7 @@ if __name__ == "__main__":
 
     n_targets=[]
 
-    radius_coarse=750
+    radius_coarse=1500
     L=10000
     T=50
     radius_detection=25
@@ -440,11 +463,11 @@ if __name__ == "__main__":
 
     # Define Agent object
 
-    a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling, episodes)
+    a1=Agent(radius_coarse,L,T,radius_detection, freq_sampling)
 
     #Learning block
 
-    scenarios=1
+    scenarios=50
 
     for j in range(scenarios):
 
@@ -463,11 +486,18 @@ if __name__ == "__main__":
             # print("Episode: " + str(a1.episode))
             action = a1.sample_action_levy()
             # print("action " +str (action))
-            a1.updates_weigts( action, env)
+            ## use this if one-step actor critic
 
+            # a1.updates_weigts( action, env)
+
+            a1.generate_one_step(action, env)
             # time.sleep(1)
 
+        print("for episode : " +str(j) + " A : " +str(a1.A))
+
         n_targets.append(np.sum(a1.targets_collected))
+
+        a1.monte_carlo_update()
 
         if j==(scenarios-1):
 
@@ -501,6 +531,8 @@ a1.weigths_vector
 # result will be a matrix representing the values in the grid
 # specified by those arguments
 
+a1.episode=4
+
 targets = np.loadtxt('target_large.csv', delimiter=',')
 x_t=targets[:,0]
 y_t=targets[:,1]
@@ -508,7 +540,7 @@ y_t=targets[:,1]
 rng = np.random.default_rng()
 x = 10000 *np.random.uniform(0,1,2000)
 y = 10000 *np.random.uniform(0,1,2000)
-z=[np.dot(a1.weigths_vector,a1.feature_vector(vector_x[i], vector_y[i])) for i in range(2000)]
+z=[a1.probability_actions(vector_x[i], vector_y[i]) for i in range(2000)]
 X = np.linspace(min(x), max(x))
 Y = np.linspace(min(y), max(y))
 X, Y = np.meshgrid(X, Y)  # 2D grid for interpolation
@@ -517,9 +549,13 @@ Z = interp(X, Y)
 plt.pcolormesh(X, Y, Z, shading='auto')
 plt.plot(x_t, y_t, "ok", label="input point", color="red")
 # plt.legend()
-plt.colorbar()
-plt.axis("equal")
+# plt.colorbar()
+# plt.axis("equal")
 plt.show()
 
 
 R=a1.targets_collected
+a1.theta
+
+p_mu_2=0.1
+random.choices([2,3], weights=[p_mu_2, 1-p_mu_2], k=1)[0]
