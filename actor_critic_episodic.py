@@ -284,12 +284,12 @@ class Agent:
 
         return nabla
 
-    def update_next_state(self,action):
+    def next_state(self,l,beta):
 
-        vel_x=action[0]
-        vel_y=action[1]
-        self.pos_x_prime = self.pos_x + vel_x * 1
-        self.pos_y_prime = self.pos_y + vel_y * 1
+        vel_x = l * np.cos(beta)
+        vel_y = l * np.sin(beta)
+        self.pos_x_prime = self.pos_x + vel_x
+        self.pos_y_prime = self.pos_y + vel_y
 
         if self.pos_x_prime > self.L:
             self.pos_x_prime = 2 * self.L - self.pos_x_prime
@@ -302,6 +302,8 @@ class Agent:
 
         if self.pos_y_prime < 0:
             self.pos_y_prime = -1 * self.pos_y_prime
+
+        return (self.pos_x_prime, self.pos_y_prime)
 
     def update_state(self):
 
