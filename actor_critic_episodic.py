@@ -164,7 +164,13 @@ class Agent:
 
     def sample_parameter(self, pos_x, pos_y):
 
-        #calculate h(s,a theta)
+        """
+        :param pos_x: position x
+        :param pos_y: position y
+        :return: {2,3}
+        """
+
+        # calculate h(s,a theta)
 
         partial_x_sa=list(self.feature_vector(pos_x, pos_y))
         zeros_x_sa=len(partial_x_sa)*[0]
@@ -173,9 +179,7 @@ class Agent:
         h_mu_2 = np.dot(self.theta_mu, x_sa_mu_2)
         h_mu_3 = np.dot(self.theta_mu, x_sa_mu_3)
         p_mu_2 = np.exp(h_mu_2)/(np.exp(h_mu_2) +np.exp(h_mu_3))
-
         # print("Probability of u_2 : " +str(p_mu_2))
-
         self.parameter=random.choices([2,3], weights=[p_mu_2, 1-p_mu_2], k=1)[0]
 
         return self.parameter
@@ -194,19 +198,6 @@ class Agent:
         p_mu_2 = np.exp(h_mu_2) / (np.exp(h_mu_2) + np.exp(h_mu_3))
 
         return p_mu_2
-
-    def sample_action(self):
-
-        self.A.append(self.sample_parameter())
-        mu=self.parameter-1
-
-        l=pareto.rvs(mu, scale=250,size=1)[0]
-        angle=np.random.uniform(0,2*np.pi,1)[0]
-        # print("angle vel :" + str(angle))
-        vel_x = l*np.cos(angle)
-        vel_y = l*np.sin(angle)
-
-        return (vel_x, vel_y)
 
     def sample_action_levy(self):
 
