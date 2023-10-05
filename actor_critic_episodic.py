@@ -20,7 +20,6 @@ class Enviroment:
         self.L = L
         self.target_location=target_location
 
-
     def update_target_status(self, key_dict):
 
         new_tuple = (self.targets[key_dict][0],self.targets[key_dict][1],1)
@@ -39,14 +38,12 @@ class Enviroment:
         for t in range(self.n_threats):
             self.threats[t] = (self.threats[t][0], self.threats[t][1], 0)
 
-    def collected_targets(self, agent):
+    def collected_targets(self, pos_x, pos_y, radius_detection):
 
         """ Return the number of targets given the historical
         position of the agent
         """
-        p_x = agent.pos_x
-        p_y = agent.pos_y
-        agent_position=(p_x,p_y)
+        agent_position=(pos_x,pos_y)
 
         cont=0
         initial_range=len(self.target_location)
@@ -55,7 +52,7 @@ class Enviroment:
 
         for i in range(initial_range):
 
-            if distance.euclidean(agent_position, list_target_location[i])<= agent.radius_detection:
+            if distance.euclidean(agent_position, list_target_location[i])<= radius_detection:
 
                 removal.add(list_target_location[i])
                 cont+=1
@@ -67,9 +64,16 @@ class Enviroment:
         self.target_location=self.target_location.difference(removal)
 
         if cont > 0:
+
+            R = 100 * cont
             print("Total targets : " + str(cont))
 
-        return cont
+        else:
+
+            R=-10
+
+
+        return (R, cont)
 
 class Agent:
 
@@ -111,6 +115,12 @@ class Agent:
         self.targets_collected=[]
 
     def feature_vector(self, pos_x, pos_y):
+
+        """
+        :param pos_x:
+        :param pos_y:
+        :return: array of vector of 0-1
+        """
 
         if self.episode==0:
 
@@ -313,66 +323,25 @@ class Agent:
         self.path_y.append(self.pos_y)
         self.episode+=1
 
-    def updates_weigts(self, action, enviroment):
+    def update_w(self, delta, pos_x, pos_y):
 
-        self.update_next_state(action)
-        number_targets = enviroment.collected_targets(self)
-        self.targets_collected.append(number_targets)
-        reward=self.targets_collected[-1]
+        x_s=self.feature_vector(pos_x, pos_y)
+        update=np.where(x_s>0, delta*self.alpha*x_s, x_s)
+        self.w=np.add(self.w, update)
 
-        if reward==0:
+        pass
 
-            reward=-10
+    def update_theta_mu(self):
 
-        else:
+        pass
 
-            reward=100
 
-        # print("current position: " +str((a1.pos_x, a1.pos_y)))
-        # print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
-        x_s = self.feature_vector(self.pos_x, self.pos_y)
-        x_s_prime = self.feature_vector(self.pos_x_prime, self.pos_y_prime)
-        current_s = np.dot(x_s, self.weigths_vector)
-        next_s = self.gamma * np.dot(x_s_prime, self.weigths_vector)
-        # print("v_(S, w) : "  +str(current_s))
-        # print("v_(S',w) : " + str(next_s))
+    def delta(self, pos_x, pos_y, pos_x_prime, pos_y_prime, reward):
 
-        if (self.episode+2 <=self.episodes):
+        v_hat=np.dot(self.w, self.feature_vector(pos_x, pos_y))
+        v_hat_prime= np.dot(self.w, self.feature_vector(pos_x_prime, pos_y_prime))
 
-            delta = reward + next_s - current_s
-
-            self.weigths_vector = np.array(self.weigths_vector) + \
-                                  np.array(self.alpha * delta * x_s)
-
-            self.theta = self.theta + \
-                         self.alpha * delta * self.nabla_pi_sa()
-
-        elif (self.episode+1 ==self.episodes):
-
-            delta = reward  - current_s
-
-            self.weigths_vector = np.array(self.weigths_vector) + \
-                                  np.array(self.alpha * delta * x_s)
-
-            self.theta = self.theta + \
-                         self.alpha * delta * self.nabla_pi_sa()
-
-        else:
-
-            pass
-
-        self.update_state()
-
-        # number_targets=env.collected_targets(self)
-        #
-        # if number_targets>0:
-        #
-        #     print("Add to target collected list : " +str(number_targets) +
-        #           "at :" +str((self.pos_x,self.pos_y)))
-        #
-        # self.targets_collected.append(number_targets)
-
-        return delta
+        return reward+v_hat_prime-v_hat
 
     def generate_one_step(self,mu,beta,enviroment):
 
@@ -525,3 +494,12 @@ a1.theta
 
 p_mu_2=0.1
 random.choices([2,3], weights=[p_mu_2, 1-p_mu_2], k=1)[0]
+
+
+w=np.array([4,5,6,7])
+a=np.array([1,0,0,1])
+
+j=np.where(a >0, 10*a, a)
+j
+delta*alpha
+np.place(w, a>0, [44, 55])
