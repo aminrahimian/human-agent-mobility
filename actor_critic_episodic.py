@@ -116,7 +116,7 @@ class Agent:
         self.t=0
         self.path_x=[self.pos_x]
         self.path_y=[self.pos_y]
-        self.targets_collected=[]
+        self.targets_collected=0
 
     def feature_vector(self, pos_x, pos_y):
 
@@ -429,7 +429,8 @@ def one_episode(radius_coarse,L,T,radius_detection):
         beta_i, beta_mean, beta_sd = robot.sample_angle(feature_vector)
         pos_x_prime, pos_y_prime = robot.next_state(l, beta_i)
         feature_vector_prime = robot.feature_vector(pos_x_prime, pos_y_prime)
-        reward, _ = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+        reward, cont = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+        robot.targets_collected+=cont
         delta = robot.delta(feature_vector, feature_vector_prime, reward)
         robot.update_w(delta, pos_x, pos_y)
         robot.update_theta_mu(mu, delta, feature_vector)
@@ -450,7 +451,8 @@ def one_episode(radius_coarse,L,T,radius_detection):
     beta_i, beta_mean, beta_sd = robot.sample_angle(feature_vector)
     pos_x_prime, pos_y_prime = robot.next_state(l, beta_i)
     feature_vector_prime = robot.feature_vector(pos_x_prime, pos_y_prime)
-    reward, _ = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+    reward, cont = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+    robot.targets_collected += cont
     delta = robot.delta_T(feature_vector, reward)
     robot.update_w(delta, pos_x, pos_y)
     robot.update_theta_mu(mu, delta, feature_vector)
@@ -462,6 +464,14 @@ def one_episode(radius_coarse,L,T,radius_detection):
     # time.sleep(1)
     robot.save_weights()
 
+    return robot.targets_collected
+
+
+def learning_simulation(N,radius_coarse, L, T, radius_detection):
+
+    cum_targets=np.array([one_episode(radius_coarse, L, T, radius_detection) for i in range(N)])
+
+    return cum_targets
 
 #Initialization values
 
@@ -473,14 +483,16 @@ if __name__ == "__main__":
     T=1000
     radius_detection=25
 
+    one_episode(radius_coarse,L,T, radius_detection)
+
     w, theta_mu, theta_mean_beta, theta_sd_beta=robot.load_weights()
 
     #Learning block
 
 
 # plot path
-targets = np.loadtxt('target_large.csv', delimiter=',')
-robot.plot_path(targets)
+# targets = np.loadtxt('target_large.csv', delimiter=',')
+# robot.plot_path(targets)
 
 # x_t=targets[:,0]
 # y_t=targets[:,1]
