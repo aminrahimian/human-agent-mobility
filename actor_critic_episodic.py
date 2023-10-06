@@ -346,6 +346,12 @@ class Agent:
 
         return reward+v_hat_prime-v_hat
 
+    def delta_T(self, feature_vector, reward):
+
+        v_hat = np.dot(self.w, feature_vector)
+
+        return reward - v_hat
+
     def generate_one_step(self,mu,beta,enviroment):
 
         self.update_next_state(mu)
