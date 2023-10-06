@@ -97,14 +97,17 @@ class Agent:
         self.w = np.array(len(self.c)*[0])
         self.theta_mu = np.array(len(self.c)*[0] + len(self.c)*[0])
         self.theta_mean_beta = np.array(len(self.c) * [0])
-        self.theta_sd_beta = np.array(len(self.c) * [1])  # an approximation of 1 standard deviation
+        self.theta_sd_beta = np.array(len(self.c) * [3])  # an approximation of 1 standard deviation
+
+        self.alpha_mean = 1e-2
+        self.alpha_sd = 1e-4
 
         #---------------------------------------------------------------
 
         self.radius_coarse = radius_coarse
         self.radius_detection=radius_detection
         self.cum_targets = 0
-        self.alpha = 1e-5
+        self.alpha = 1e-2
         self.gamma = 1
         self.time_step = 0
         self.parameter=2
@@ -172,7 +175,7 @@ class Agent:
 
         return (vel_x, vel_y)
 
-    def sample_parameter(self, pos_x, pos_y):
+    def sample_parameter(self,feature_vector):
 
         """
         :param pos_x: position x
@@ -182,7 +185,7 @@ class Agent:
 
         # calculate h(s,a theta)
 
-        partial_x_sa=list(self.feature_vector(pos_x, pos_y))
+        partial_x_sa=list(feature_vector)
         zeros_x_sa=len(partial_x_sa)*[0]
         x_sa_mu_2 = partial_x_sa + zeros_x_sa
         x_sa_mu_3 =  zeros_x_sa + partial_x_sa
@@ -270,27 +273,27 @@ class Agent:
 
         vel_x = l * np.cos(beta)
         vel_y = l * np.sin(beta)
-        self.pos_x_prime = self.pos_x + vel_x
-        self.pos_y_prime = self.pos_y + vel_y
+        pos_x_prime = self.pos_x + vel_x
+        pos_y_prime = self.pos_y + vel_y
 
-        if self.pos_x_prime > self.L:
-            self.pos_x_prime = 2 * self.L - self.pos_x_prime
+        if pos_x_prime > self.L:
+            pos_x_prime = 2 * self.L - pos_x_prime
 
-        if self.pos_x_prime < 0:
-            self.pos_x_prime = -1 * self.pos_x_prime
+        if pos_x_prime < 0:
+            pos_x_prime = -1 * pos_x_prime
 
-        if self.pos_y_prime > self.L:
-            self.pos_y_prime = 2 * self.L - self.pos_y_prime
+        if pos_y_prime > self.L:
+            pos_y_prime = 2 * self.L - pos_y_prime
 
-        if self.pos_y_prime < 0:
-            self.pos_y_prime = -1 * self.pos_y_prime
+        if pos_y_prime < 0:
+            pos_y_prime = -1 * pos_y_prime
 
-        return (self.pos_x_prime, self.pos_y_prime)
+        return (pos_x_prime, pos_y_prime)
 
-    def update_state(self):
+    def update_state(self, pos_x_prime, pos_y_prime):
 
-        self.pos_x = self.pos_x_prime
-        self.pos_y = self.pos_y_prime
+        self.pos_x = pos_x_prime
+        self.pos_y = pos_y_prime
         self.path_x.append(self.pos_x)
         self.path_y.append(self.pos_y)
         self.t+=1
@@ -303,16 +306,41 @@ class Agent:
 
         pass
 
+
+    def sample_angle(self, pos_x, pos_y):
+
+        feature_vector=self.feature_vector(pos_x, pos_y)
+        beta_mean=np.dot(self.theta_mean_beta,self.feature_vector(pos_x, pos_y))
+        beta_sd=np.dot(self.theta_sd_beta,self.feature_vector(pos_x, pos_y))
+        beta=norm.rvs(beta_mean, beta_sd, size=1)[0]
+
+        return (beta, beta_mean, beta_sd, feature_vector)
+
+    def update_theta_mean_beta(self,delta,beta_i, beta_mean, beta_sd, feature_vector):
+
+        gradient_mean=self.alpha_mean*delta*(beta_i-beta_mean)*(1/beta_sd**2)*feature_vector
+        self.theta_mean_beta=np.add(self.theta_mean_beta, gradient_mean)
+
+        pass
+
+    def update_theta_sd_beta(self, delta,beta_i, beta_mean, beta_sd, feature_vector):
+
+        gradient_sd = self.alpha_sd *delta* (((beta_i-beta_mean)**2/(beta_sd)**2)-1) * feature_vector
+        self.theta_sd_beta = np.add(self.theta_sd_beta, gradient_sd)
+
+        pass
+
+
     def update_theta_mu(self, mu, delta, pos_x, pos_y):
 
         self.theta_mu=np.add(self.theta_mu, self.alpha*self.nabla_pi_sa(pos_x,pos_y,mu, delta))
 
         pass
 
-    def delta(self, pos_x, pos_y, pos_x_prime, pos_y_prime, reward):
+    def delta(self, feature_vector,feature_vector_prime, reward):
 
-        v_hat=np.dot(self.w, self.feature_vector(pos_x, pos_y))
-        v_hat_prime= np.dot(self.w, self.feature_vector(pos_x_prime, pos_y_prime))
+        v_hat=np.dot(self.w, feature_vector)
+        v_hat_prime= np.dot(self.w, feature_vector_prime)
 
         return reward+v_hat_prime-v_hat
 
@@ -375,43 +403,54 @@ if __name__ == "__main__":
 
     # test iteration
 
-    pos_x=robot.pos_x
-    pos_y=robot.pos_y
-    mu=robot.sample_parameter(pos_x, pos_y)
-    l=robot.sample_step_length(mu)
-    beta=np.pi*0.25
-    pos_x_prime, pos_y_prime = robot.next_state(l,beta)
-    reward,_=env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
-    delta=robot.delta(pos_x, pos_y, pos_x_prime, pos_y_prime, reward)
-    robot.update_w(delta,pos_x, pos_y)
-    robot.update_theta_mu(mu, delta, pos_x, pos_y)
-    print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)))
-    robot.update_state()
-    robot.t
+    while robot.t!=robot.T:
+
+        pos_x=robot.pos_x
+        pos_y=robot.pos_y
+        feature_vector=robot.feature_vector(pos_x, pos_y)
+        mu=robot.sample_parameter(feature_vector)
+        l=robot.sample_step_length(mu)
+        beta_i, beta_mean, beta_sd, feature_vector=robot.sample_angle(pos_x, pos_y)
+        pos_x_prime, pos_y_prime = robot.next_state(l,beta_i)
+        feature_vector_prime=robot.feature_vector(pos_x_prime, pos_y_prime)
+        reward,_=env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+        delta=robot.delta(pos_x, pos_y, pos_x_prime, pos_y_prime, reward)
+        robot.update_w(delta,pos_x, pos_y)
+        robot.update_theta_mu(mu, delta, pos_x, pos_y)
+        robot.update_theta_mean_beta(delta,beta_i, beta_mean, beta_sd,feature_vector)
+        robot.update_theta_sd_beta(delta,beta_i, beta_mean, beta_sd, feature_vector)
+        print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
+              "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
+        robot.update_state()
+        robot.t
+        # time.sleep(1)
 
     #Learning block
 
 
+#
 targets = np.loadtxt('target_large.csv', delimiter=',')
-x_t=targets[:,0]
-y_t=targets[:,1]
+robot.plot_path(targets)
 
-
-def plot_heat_map():
-
-    rng = np.random.default_rng()
-    x = 10000 *np.random.uniform(0,1,2000)
-    y = 10000 *np.random.uniform(0,1,2000)
-    z=[a1.probability_actions(vector_x[i], vector_y[i]) for i in range(2000)]
-    X = np.linspace(min(x), max(x))
-    Y = np.linspace(min(y), max(y))
-    X, Y = np.meshgrid(X, Y)  # 2D grid for interpolation
-    interp = NearestNDInterpolator(list(zip(x, y)), z)
-    Z = interp(X, Y)
-    plt.pcolormesh(X, Y, Z, shading='auto')
-    plt.plot(x_t, y_t, "ok", label="input point", color="red")
-    # plt.legend()
-    # plt.colorbar()
-    # plt.axis("equal")
-    plt.show()
-
+# x_t=targets[:,0]
+# y_t=targets[:,1]
+#
+#
+# def plot_heat_map():
+#
+#     rng = np.random.default_rng()
+#     x = 10000 *np.random.uniform(0,1,2000)
+#     y = 10000 *np.random.uniform(0,1,2000)
+#     z=[a1.probability_actions(vector_x[i], vector_y[i]) for i in range(2000)]
+#     X = np.linspace(min(x), max(x))
+#     Y = np.linspace(min(y), max(y))
+#     X, Y = np.meshgrid(X, Y)  # 2D grid for interpolation
+#     interp = NearestNDInterpolator(list(zip(x, y)), z)
+#     Z = interp(X, Y)
+#     plt.pcolormesh(X, Y, Z, shading='auto')
+#     plt.plot(x_t, y_t, "ok", label="input point", color="red")
+#     # plt.legend()
+#     # plt.colorbar()
+#     # plt.axis("equal")
+#     plt.show()
+#
