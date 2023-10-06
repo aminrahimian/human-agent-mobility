@@ -97,17 +97,18 @@ class Agent:
         self.w = np.array(len(self.c)*[0])
         self.theta_mu = np.array(len(self.c)*[0] + len(self.c)*[0])
         self.theta_mean_beta = np.array(len(self.c) * [0])
-        self.theta_sd_beta = np.array(len(self.c) * [3])  # an approximation of 1 standard deviation
+        self.theta_sd_beta = np.array(len(self.c) * [0.3])  # an approximation of 1 standard deviation
 
-        self.alpha_mean = 1e-2
-        self.alpha_sd = 1e-4
+        self.alpha_mean = 5e-2
+        self.alpha_sd = 5e-4
 
         #---------------------------------------------------------------
 
         self.radius_coarse = radius_coarse
         self.radius_detection=radius_detection
         self.cum_targets = 0
-        self.alpha = 1e-2
+        self.alpha_w = 1e-2
+        self.alpha_theta= 1e-4
         self.gamma = 1
         self.time_step = 0
         self.parameter=2
@@ -214,8 +215,7 @@ class Agent:
 
     def sample_step_length(self,mu):
 
-        self.A.append(mu)
-        alpha= self.parameter -1
+        alpha= mu -1
         V = np.random.uniform(-np.pi*0.5, 0.5*np.pi, 1)[0]
         W = expon.rvs(size=1)[0]
         cop1=(np.sin(alpha*V))/((np.cos(V))**(1/alpha))
@@ -241,9 +241,9 @@ class Agent:
 
         return step_l
 
-    def nabla_pi_sa(self, pos_x, pos_y, mu, delta):
+    def nabla_pi_sa(self, feature_vector, mu, delta):
 
-        partial_x_sa = list(self.feature_vector(pos_x, pos_y))
+        partial_x_sa = list(feature_vector)
         zeros_x_sa = len(partial_x_sa) * [0]
         x_sa_mu_2 = partial_x_sa + zeros_x_sa
         x_sa_mu_3 = zeros_x_sa + partial_x_sa
@@ -301,24 +301,25 @@ class Agent:
     def update_w(self, delta, pos_x, pos_y):
 
         x_s=self.feature_vector(pos_x, pos_y)
-        update=np.where(x_s>0, delta*self.alpha*x_s, x_s)
+        update=np.where(x_s>0, delta*self.alpha_w*x_s, x_s)
         self.w=np.add(self.w, update)
 
         pass
 
 
-    def sample_angle(self, pos_x, pos_y):
+    def sample_angle(self, feature_vector):
 
-        feature_vector=self.feature_vector(pos_x, pos_y)
-        beta_mean=np.dot(self.theta_mean_beta,self.feature_vector(pos_x, pos_y))
-        beta_sd=np.dot(self.theta_sd_beta,self.feature_vector(pos_x, pos_y))
+        beta_mean=np.dot(self.theta_mean_beta,feature_vector)
+        beta_sd=np.exp(np.dot(self.theta_sd_beta,feature_vector))
         beta=norm.rvs(beta_mean, beta_sd, size=1)[0]
+        print("Normal distribution with mean " + str(beta_mean) + " and sd : " +str(beta_sd))
 
-        return (beta, beta_mean, beta_sd, feature_vector)
+        return (beta, beta_mean, beta_sd)
 
     def update_theta_mean_beta(self,delta,beta_i, beta_mean, beta_sd, feature_vector):
 
         gradient_mean=self.alpha_mean*delta*(beta_i-beta_mean)*(1/beta_sd**2)*feature_vector
+        print("Change in mean: " + str(self.alpha_mean*delta*(beta_i-beta_mean)*(1/beta_sd**2)))
         self.theta_mean_beta=np.add(self.theta_mean_beta, gradient_mean)
 
         pass
@@ -326,14 +327,15 @@ class Agent:
     def update_theta_sd_beta(self, delta,beta_i, beta_mean, beta_sd, feature_vector):
 
         gradient_sd = self.alpha_sd *delta* (((beta_i-beta_mean)**2/(beta_sd)**2)-1) * feature_vector
+        print("Change in sd: " +str(self.alpha_sd *delta* (((beta_i-beta_mean)**2/(beta_sd)**2)-1) ) )
         self.theta_sd_beta = np.add(self.theta_sd_beta, gradient_sd)
 
         pass
 
 
-    def update_theta_mu(self, mu, delta, pos_x, pos_y):
+    def update_theta_mu(self, mu, delta, feature_vector):
 
-        self.theta_mu=np.add(self.theta_mu, self.alpha*self.nabla_pi_sa(pos_x,pos_y,mu, delta))
+        self.theta_mu=np.add(self.theta_mu, self.alpha_theta*self.nabla_pi_sa(feature_vector,mu, delta))
 
         pass
 
@@ -383,6 +385,24 @@ class Agent:
         plt.plot(targets[:, 0], targets[:, 1], 'ko')
         plt.show()
 
+    def save_weights(self):
+
+        np.savetxt('w.csv', self.w, delimiter=',')
+        np.savetxt('theta_mu.csv', self.theta_mu, delimiter=',')
+        np.savetxt('theta_mean_beta.csv', self.theta_mean_beta, delimiter=',')
+        np.savetxt('theta_sd_beta.csv', self.theta_sd_beta, delimiter=',')
+
+        pass
+
+    def load_weights(self):
+
+        w=np.loadtxt('w.csv', self.w, delimiter=',')
+        theta_mu=np.loadtxt('theta_mu.csv', self.theta_mu, delimiter=',')
+        theta_mean_beta= np.loadtxt('theta_mean_beta.csv', self.theta_mean_beta, delimiter=',')
+        theta_sd_beta= np.loadtxt('theta_sd_beta.csv', self.theta_sd_beta, delimiter=',')
+
+        return (w,theta_mu,theta_mean_beta,theta_sd_beta)
+
 
 #Initialization values
 
@@ -400,7 +420,7 @@ if __name__ == "__main__":
     targets = np.loadtxt('target_large.csv', delimiter=',')
     target_location = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
     env = Enviroment(L, target_location)
-
+    np.mean([robot.sample_step_length(3) for i in range(1000)])
     # test iteration
 
     while robot.t!=robot.T:
@@ -410,25 +430,29 @@ if __name__ == "__main__":
         feature_vector=robot.feature_vector(pos_x, pos_y)
         mu=robot.sample_parameter(feature_vector)
         l=robot.sample_step_length(mu)
-        beta_i, beta_mean, beta_sd, feature_vector=robot.sample_angle(pos_x, pos_y)
+        beta_i, beta_mean, beta_sd=robot.sample_angle(feature_vector)
         pos_x_prime, pos_y_prime = robot.next_state(l,beta_i)
         feature_vector_prime=robot.feature_vector(pos_x_prime, pos_y_prime)
         reward,_=env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
-        delta=robot.delta(pos_x, pos_y, pos_x_prime, pos_y_prime, reward)
+        delta=robot.delta(feature_vector, feature_vector_prime, reward)
         robot.update_w(delta,pos_x, pos_y)
-        robot.update_theta_mu(mu, delta, pos_x, pos_y)
+        robot.update_theta_mu(mu, delta, feature_vector)
         robot.update_theta_mean_beta(delta,beta_i, beta_mean, beta_sd,feature_vector)
         robot.update_theta_sd_beta(delta,beta_i, beta_mean, beta_sd, feature_vector)
-        print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
-              "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
-        robot.update_state()
+
+        # print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
+        #       "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
+        robot.update_state(pos_x_prime, pos_y_prime)
         robot.t
         # time.sleep(1)
+
+    robot.save_weights()
+    w, theta_mu, theta_mean_beta, theta_sd_beta=robot.load_weights()
 
     #Learning block
 
 
-#
+# plot path
 targets = np.loadtxt('target_large.csv', delimiter=',')
 robot.plot_path(targets)
 
