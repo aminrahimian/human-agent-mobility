@@ -402,12 +402,65 @@ class Agent:
 
     def load_weights(self):
 
-        w=np.loadtxt('w.csv', self.w, delimiter=',')
-        theta_mu=np.loadtxt('theta_mu.csv', self.theta_mu, delimiter=',')
-        theta_mean_beta= np.loadtxt('theta_mean_beta.csv', self.theta_mean_beta, delimiter=',')
-        theta_sd_beta= np.loadtxt('theta_sd_beta.csv', self.theta_sd_beta, delimiter=',')
+        w=np.loadtxt('w.csv', delimiter=',')
+        theta_mu=np.loadtxt('theta_mu.csv', delimiter=',')
+        theta_mean_beta= np.loadtxt('theta_mean_beta.csv', delimiter=',')
+        theta_sd_beta= np.loadtxt('theta_sd_beta.csv', delimiter=',')
 
         return (w,theta_mu,theta_mean_beta,theta_sd_beta)
+
+
+def one_episode(radius_coarse,L,T,radius_detection):
+    # Create robot and enviroment objects
+
+    robot = Agent(radius_coarse, L, T, radius_detection)
+    targets = np.loadtxt('target_large.csv', delimiter=',')
+    target_location = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
+    env = Enviroment(L, target_location)
+    # np.mean([robot.sample_step_length(3) for i in range(1000)])
+    # test iteration
+
+    while robot.t != robot.T:
+        pos_x = robot.pos_x
+        pos_y = robot.pos_y
+        feature_vector = robot.feature_vector(pos_x, pos_y)
+        mu = robot.sample_parameter(feature_vector)
+        l = robot.sample_step_length(mu)
+        beta_i, beta_mean, beta_sd = robot.sample_angle(feature_vector)
+        pos_x_prime, pos_y_prime = robot.next_state(l, beta_i)
+        feature_vector_prime = robot.feature_vector(pos_x_prime, pos_y_prime)
+        reward, _ = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+        delta = robot.delta(feature_vector, feature_vector_prime, reward)
+        robot.update_w(delta, pos_x, pos_y)
+        robot.update_theta_mu(mu, delta, feature_vector)
+        robot.update_theta_mean_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
+        robot.update_theta_sd_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
+
+        # print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
+        #       "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
+        robot.update_state(pos_x_prime, pos_y_prime)
+
+        # time.sleep(1)
+
+    pos_x = robot.pos_x
+    pos_y = robot.pos_y
+    feature_vector = robot.feature_vector(pos_x, pos_y)
+    mu = robot.sample_parameter(feature_vector)
+    l = robot.sample_step_length(mu)
+    beta_i, beta_mean, beta_sd = robot.sample_angle(feature_vector)
+    pos_x_prime, pos_y_prime = robot.next_state(l, beta_i)
+    feature_vector_prime = robot.feature_vector(pos_x_prime, pos_y_prime)
+    reward, _ = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+    delta = robot.delta_T(feature_vector, reward)
+    robot.update_w(delta, pos_x, pos_y)
+    robot.update_theta_mu(mu, delta, feature_vector)
+    robot.update_theta_mean_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
+    robot.update_theta_sd_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
+    # print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
+    #       "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
+    robot.update_state(pos_x_prime, pos_y_prime)
+    # time.sleep(1)
+    robot.save_weights()
 
 
 #Initialization values
@@ -420,39 +473,6 @@ if __name__ == "__main__":
     T=1000
     radius_detection=25
 
-    # Create robot and enviroment objects
-
-    robot=Agent(radius_coarse,L,T,radius_detection)
-    targets = np.loadtxt('target_large.csv', delimiter=',')
-    target_location = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
-    env = Enviroment(L, target_location)
-    np.mean([robot.sample_step_length(3) for i in range(1000)])
-    # test iteration
-
-    while robot.t!=robot.T:
-
-        pos_x=robot.pos_x
-        pos_y=robot.pos_y
-        feature_vector=robot.feature_vector(pos_x, pos_y)
-        mu=robot.sample_parameter(feature_vector)
-        l=robot.sample_step_length(mu)
-        beta_i, beta_mean, beta_sd=robot.sample_angle(feature_vector)
-        pos_x_prime, pos_y_prime = robot.next_state(l,beta_i)
-        feature_vector_prime=robot.feature_vector(pos_x_prime, pos_y_prime)
-        reward,_=env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
-        delta=robot.delta(feature_vector, feature_vector_prime, reward)
-        robot.update_w(delta,pos_x, pos_y)
-        robot.update_theta_mu(mu, delta, feature_vector)
-        robot.update_theta_mean_beta(delta,beta_i, beta_mean, beta_sd,feature_vector)
-        robot.update_theta_sd_beta(delta,beta_i, beta_mean, beta_sd, feature_vector)
-
-        # print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
-        #       "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
-        robot.update_state(pos_x_prime, pos_y_prime)
-        robot.t
-        # time.sleep(1)
-
-    robot.save_weights()
     w, theta_mu, theta_mean_beta, theta_sd_beta=robot.load_weights()
 
     #Learning block
