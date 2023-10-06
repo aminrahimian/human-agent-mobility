@@ -66,7 +66,7 @@ class Enviroment:
         if cont > 0:
 
             R = 100 * cont
-            print("Total targets : " + str(cont))
+            # print("Total targets : " + str(cont))
 
         else:
 
@@ -77,7 +77,7 @@ class Enviroment:
 
 class Agent:
 
-    def __init__(self, radius_coarse, L, T,radius_detection):
+    def __init__(self, radius_coarse, L, T,radius_detection,w, theta_mu, theta_mean_beta, theta_sd_beta):
 
         self.L = L
         self.T = T
@@ -94,10 +94,15 @@ class Agent:
         self.c_2 = list(itertools.product(coarse_centers, coarse_centers))
         self.c_0 = [(L / 2, L / 2)]
         self.c = self.c_0 + self.c_1 + self.c_2
-        self.w = np.array(len(self.c)*[0])
-        self.theta_mu = np.array(len(self.c)*[0] + len(self.c)*[0])
-        self.theta_mean_beta = np.array(len(self.c) * [0])
-        self.theta_sd_beta = np.array(len(self.c) * [0.3])  # an approximation of 1 standard deviation
+        self.w = w
+        self.theta_mu = theta_mu
+        self.theta_mean_beta = theta_mean_beta
+        self.theta_sd_beta =theta_sd_beta  # an approximation of 1 standard deviation
+
+        # self.w = np.array(len(self.c) * [0])
+        # self.theta_mu = np.array(len(self.c) * [0] + len(self.c) * [0])
+        # self.theta_mean_beta = np.array(len(self.c) * [0])
+        # self.theta_sd_beta = np.array(len(self.c) * [0.3])  # an approximation of 1 standard deviation
 
         self.alpha_mean = 5e-2
         self.alpha_sd = 5e-4
@@ -312,14 +317,14 @@ class Agent:
         beta_mean=np.dot(self.theta_mean_beta,feature_vector)
         beta_sd=np.exp(np.dot(self.theta_sd_beta,feature_vector))
         beta=norm.rvs(beta_mean, beta_sd, size=1)[0]
-        print("Normal distribution with mean " + str(beta_mean) + " and sd : " +str(beta_sd))
+        # print("Normal distribution with mean " + str(beta_mean) + " and sd : " +str(beta_sd))
 
         return (beta, beta_mean, beta_sd)
 
     def update_theta_mean_beta(self,delta,beta_i, beta_mean, beta_sd, feature_vector):
 
         gradient_mean=self.alpha_mean*delta*(beta_i-beta_mean)*(1/beta_sd**2)*feature_vector
-        print("Change in mean: " + str(self.alpha_mean*delta*(beta_i-beta_mean)*(1/beta_sd**2)))
+        # print("Change in mean: " + str(self.alpha_mean*delta*(beta_i-beta_mean)*(1/beta_sd**2)))
         self.theta_mean_beta=np.add(self.theta_mean_beta, gradient_mean)
 
         pass
@@ -327,7 +332,7 @@ class Agent:
     def update_theta_sd_beta(self, delta,beta_i, beta_mean, beta_sd, feature_vector):
 
         gradient_sd = self.alpha_sd *delta* (((beta_i-beta_mean)**2/(beta_sd)**2)-1) * feature_vector
-        print("Change in sd: " +str(self.alpha_sd *delta* (((beta_i-beta_mean)**2/(beta_sd)**2)-1) ) )
+        # print("Change in sd: " +str(self.alpha_sd *delta* (((beta_i-beta_mean)**2/(beta_sd)**2)-1) ) )
         self.theta_sd_beta = np.add(self.theta_sd_beta, gradient_sd)
 
         pass
@@ -400,20 +405,38 @@ class Agent:
 
         pass
 
-    def load_weights(self):
 
-        w=np.loadtxt('w.csv', delimiter=',')
-        theta_mu=np.loadtxt('theta_mu.csv', delimiter=',')
-        theta_mean_beta= np.loadtxt('theta_mean_beta.csv', delimiter=',')
-        theta_sd_beta= np.loadtxt('theta_sd_beta.csv', delimiter=',')
+def initialize_weigths():
 
-        return (w,theta_mu,theta_mean_beta,theta_sd_beta)
+    coarse_centers = 1000 * np.arange(0, 11, 1)
+    c_1 = list(itertools.product(coarse_centers, coarse_centers))
+    c_2 = list(itertools.product(coarse_centers, coarse_centers))
+    c_0 = [(0, 0)]
+    c = c_0 + c_1 + c_2
+    w = np.array(len(c) * [0])
+    theta_mu = np.array(len(c) * [0] + len(c) * [0])
+    theta_mean_beta = np.array(len(c) * [0])
+    theta_sd_beta = np.array(len(c) * [0.3])  # an approximation of 1 standard deviation
 
+    np.savetxt('w.csv', w, delimiter=',')
+    np.savetxt('theta_mu.csv', theta_mu, delimiter=',')
+    np.savetxt('theta_mean_beta.csv', theta_mean_beta, delimiter=',')
+    np.savetxt('theta_sd_beta.csv', theta_sd_beta, delimiter=',')
 
-def one_episode(radius_coarse,L,T,radius_detection):
+def load_weights():
+
+    w=np.loadtxt('w.csv', delimiter=',')
+    theta_mu=np.loadtxt('theta_mu.csv', delimiter=',')
+    theta_mean_beta= np.loadtxt('theta_mean_beta.csv', delimiter=',')
+    theta_sd_beta= np.loadtxt('theta_sd_beta.csv', delimiter=',')
+
+    return (w,theta_mu,theta_mean_beta,theta_sd_beta)
+
+def one_episode(radius_coarse,L,T,radius_detection,w, theta_mu, theta_mean_beta, theta_sd_beta,i,j):
     # Create robot and enviroment objects
 
-    robot = Agent(radius_coarse, L, T, radius_detection)
+    print("Episode :" +str(i) + " Row " +str(j))
+    robot = Agent(radius_coarse, L, T, radius_detection,w, theta_mu, theta_mean_beta, theta_sd_beta)
     targets = np.loadtxt('target_large.csv', delimiter=',')
     target_location = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
     env = Enviroment(L, target_location)
@@ -450,7 +473,6 @@ def one_episode(radius_coarse,L,T,radius_detection):
     l = robot.sample_step_length(mu)
     beta_i, beta_mean, beta_sd = robot.sample_angle(feature_vector)
     pos_x_prime, pos_y_prime = robot.next_state(l, beta_i)
-    feature_vector_prime = robot.feature_vector(pos_x_prime, pos_y_prime)
     reward, cont = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
     robot.targets_collected += cont
     delta = robot.delta_T(feature_vector, reward)
@@ -466,29 +488,46 @@ def one_episode(radius_coarse,L,T,radius_detection):
 
     return robot.targets_collected
 
+def learning_simulation(j,N,radius_coarse, L, T, radius_detection):
 
-def learning_simulation(N,radius_coarse, L, T, radius_detection):
+    initialize_weigths()
+    w, theta_mu, theta_mean_beta, theta_sd_beta=load_weights()
+    learning_rate=np.array([one_episode(radius_coarse, L, T, radius_detection,w, theta_mu, theta_mean_beta, theta_sd_beta,i,j) for i in range(N)])
 
-    cum_targets=np.array([one_episode(radius_coarse, L, T, radius_detection) for i in range(N)])
+    return learning_rate
 
-    return cum_targets
+
+def learning_table(M,N,radius_coarse, L, T, radius_detection):
+
+    learning_table=np.zeros((M,N))
+
+    for j in range(M):
+
+        learning_table[j,:]=learning_simulation(j,N, radius_coarse, L, T, radius_detection)
+
 
 #Initialization values
 
 if __name__ == "__main__":
+
 
     n_targets=[]
     radius_coarse=800
     L=10000
     T=1000
     radius_detection=25
+    N=250
+    M=10
 
-    one_episode(radius_coarse,L,T, radius_detection)
-
-    w, theta_mu, theta_mean_beta, theta_sd_beta=robot.load_weights()
+    learning_table=learning_table(M,N,radius_coarse, L, T, radius_detection)
 
     #Learning block
 
+
+average=np.mean(learning_table, axis=0)
+x=np.arange(0,250)
+plt.plot(x,average, '--o', color='#65C7F5')
+plt.show()
 
 # plot path
 # targets = np.loadtxt('target_large.csv', delimiter=',')
