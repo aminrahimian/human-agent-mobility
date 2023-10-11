@@ -63,15 +63,12 @@ class Enviroment:
 
         self.target_location=self.target_location.difference(removal)
 
-        if cont > 0:
-
-            R = 100 * cont
-            # print("Total targets : " + str(cont))
+        if cont>0:
+            R=10*cont
 
         else:
 
-            R=-10
-
+            R=-1
 
         return (R, cont)
 
@@ -104,16 +101,18 @@ class Agent:
         # self.theta_mean_beta = np.array(len(self.c) * [0])
         # self.theta_sd_beta = np.array(len(self.c) * [0.3])  # an approximation of 1 standard deviation
 
-        self.alpha_mean = 5e-2
-        self.alpha_sd = 5e-4
+        self.t = 0
+        self.alpha_mean = 1e-2/(self.t+1)
+        self.alpha_sd = 1e-3
 
         #---------------------------------------------------------------
 
+        self.step_fixed=30
         self.radius_coarse = radius_coarse
         self.radius_detection=radius_detection
         self.cum_targets = 0
-        self.alpha_w = 1e-2
-        self.alpha_theta= 1e-4
+        self.alpha_w = 1e-3
+        self.alpha_theta= 1e-5
         self.gamma = 1
         self.time_step = 0
         self.parameter=2
@@ -122,6 +121,7 @@ class Agent:
         self.path_x=[self.pos_x]
         self.path_y=[self.pos_y]
         self.targets_collected=0
+
 
     def feature_vector(self, pos_x, pos_y):
 
@@ -136,7 +136,7 @@ class Agent:
             inside_circle = np.array([1] + len(self.c_1) * [0] + len(self.c_2) * [0])
             # print(" init state")
 
-        elif (self.t>0) & (self.t+1<=self.T):
+        elif (self.t>0) & (self.t<self.T):
 
             # print(">1")
             actual_pos = len(self.c_1) * [(pos_x, pos_y)]
@@ -324,8 +324,11 @@ class Agent:
     def update_theta_mean_beta(self,delta,beta_i, beta_mean, beta_sd, feature_vector):
 
         gradient_mean=self.alpha_mean*delta*(beta_i-beta_mean)*(1/beta_sd**2)*feature_vector
+
         # print("Change in mean: " + str(self.alpha_mean*delta*(beta_i-beta_mean)*(1/beta_sd**2)))
+        # print("Len Theta mean bef " +str(len(self.theta_mean_beta)))
         self.theta_mean_beta=np.add(self.theta_mean_beta, gradient_mean)
+        # print("Len Theta mean  aft " + str(len(self.theta_mean_beta)))
 
         pass
 
@@ -333,6 +336,7 @@ class Agent:
 
         gradient_sd = self.alpha_sd *delta* (((beta_i-beta_mean)**2/(beta_sd)**2)-1) * feature_vector
         # print("Change in sd: " +str(self.alpha_sd *delta* (((beta_i-beta_mean)**2/(beta_sd)**2)-1) ) )
+
         self.theta_sd_beta = np.add(self.theta_sd_beta, gradient_sd)
 
         pass
@@ -357,23 +361,10 @@ class Agent:
 
         return reward - v_hat
 
-    def generate_one_step(self,mu,beta,enviroment):
-
-        self.update_next_state(mu)
-
-        # print("current position: " +str((a1.pos_x, a1.pos_y)))
-        # print("next  position: " + str((a1.pos_x_prime, a1.pos_y_prime)))
-
-        self.update_state()
-
-        number_targets = enviroment.collected_targets(self)
-        self.targets_collected.append(number_targets)
-
-
-        return 1
 
     def reset_agent(self):
 
+        # reset should include the already weights
         self.pos_x = L / 2
         self.pos_y = L / 2
         self.pos_x_prime = L / 2
@@ -381,8 +372,9 @@ class Agent:
         self.t=0
         self.path_x = [self.pos_x]
         self.path_y = [self.pos_y]
-        self.targets_collected=[]
+        self.targets_collected=0
         self.A = []
+
 
     def plot_path(self,targets):
 
@@ -391,10 +383,35 @@ class Agent:
         :param targets:
         :return:
         """
+        self.t=1
+
+        check_points = np.array(
+            [[2000, 3000], [3000, 7000], [4000, 6000], [7000, 4000],
+             [9000, 6000], [6000, 8000], [9000, 9000],
+             [8000, 2000],
+             [1000, 4000],
+             [1000,8000],
+             [8000,1000]])
+
+        angles=np.zeros((11,1))
+
+        for i in range(11):
+            x_s = self.feature_vector(check_points[i, 0], check_points[i, 1])
+            # print("FEat vect " + str(x_s))
+            media = np.dot(x_s, self.theta_mean_beta)
+            sd = np.exp(np.dot(x_s, self.theta_sd_beta))
+            angles[i]=media
+            plt.arrow(x=check_points[i, 0], y=check_points[i, 1], dx=1000*np.cos(media), dy=1000*np.sin(media), width=.5)
+            print("Mean " + str(media) + " Sd " + str(sd) + "for location" + str(
+                (check_points[i, 0], check_points[i, 1])))
+
 
         plt.plot(self.path_x, self.path_y, '--o', color='#65C7F5')
         plt.plot(targets[:, 0], targets[:, 1], 'ko')
+
         plt.show()
+
+
 
     def save_weights(self):
 
@@ -406,18 +423,74 @@ class Agent:
         pass
 
 
+    def one_episode(self,L,target_location):
+
+        enviroment = Enviroment(L, target_location)
+
+        while self.t != self.T:
+
+            pos_x = self.pos_x
+            pos_y = self.pos_y
+            feature_vector = self.feature_vector(pos_x, pos_y)
+            mu = self.sample_parameter(feature_vector)
+            # l = self.sample_step_length(mu)
+            l=self.step_fixed
+            beta_i, beta_mean, beta_sd = self.sample_angle(feature_vector)
+            pos_x_prime, pos_y_prime = self.next_state(l, beta_i)
+            feature_vector_prime = self.feature_vector(pos_x_prime, pos_y_prime)
+            reward, cont = enviroment.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+            # print("tupla " + str((reward, cont)))
+            self.targets_collected += cont
+            # print("test " + str(self.targets_collected ))
+            delta = self.delta(feature_vector, feature_vector_prime, reward)
+            self.update_w(delta, pos_x, pos_y)
+            self.update_theta_mu(mu, delta, feature_vector)
+            self.update_theta_mean_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
+            self.update_theta_sd_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
+
+            # print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
+            #       "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
+            self.update_state(pos_x_prime, pos_y_prime)
+
+            # time.sleep(1)
+
+        pos_x = self.pos_x
+        pos_y = self.pos_y
+        feature_vector = self.feature_vector(pos_x, pos_y)
+        mu = self.sample_parameter(feature_vector)
+        l = self.step_fixed
+        # l = self.sample_step_length(mu)
+        beta_i, beta_mean, beta_sd = self.sample_angle(feature_vector)
+        pos_x_prime, pos_y_prime = self.next_state(l, beta_i)
+        reward, cont = enviroment.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
+        self.targets_collected += cont
+        delta = self.delta_T(feature_vector, reward)
+        self.update_w(delta, pos_x, pos_y)
+        self.update_theta_mu(mu, delta, feature_vector)
+        self.update_theta_mean_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
+        self.update_theta_sd_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
+        # print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
+        #       "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
+        self.update_state(pos_x_prime, pos_y_prime)
+        # time.sleep(1)
+        self.save_weights()
+
+
+        return self.targets_collected
+
 def initialize_weigths():
 
     coarse_centers = 1000 * np.arange(0, 11, 1)
     c_1 = list(itertools.product(coarse_centers, coarse_centers))
     c_2 = list(itertools.product(coarse_centers, coarse_centers))
-    c_0 = [(0, 0)]
+    c_0 = [(5000, 5000)]
     c = c_0 + c_1 + c_2
     w = np.array(len(c) * [0])
     theta_mu = np.array(len(c) * [0] + len(c) * [0])
     theta_mean_beta = np.array(len(c) * [0])
-    theta_sd_beta = np.array(len(c) * [0.3])  # an approximation of 1 standard deviation
-
+    theta_sd_beta = np.array(len(c) * [-0.5])  # an approximation of 1 standard deviation
+    # theta_sd_beta[0]=0.1
+    # theta_sd_beta[1] = 0.1
     np.savetxt('w.csv', w, delimiter=',')
     np.savetxt('theta_mu.csv', theta_mu, delimiter=',')
     np.savetxt('theta_mean_beta.csv', theta_mean_beta, delimiter=',')
@@ -431,127 +504,137 @@ def load_weights():
     theta_sd_beta= np.loadtxt('theta_sd_beta.csv', delimiter=',')
 
     return (w,theta_mu,theta_mean_beta,theta_sd_beta)
-
-def one_episode(radius_coarse,L,T,radius_detection,w, theta_mu, theta_mean_beta, theta_sd_beta,i,j):
-    # Create robot and enviroment objects
-
-    print("Episode :" +str(i) + " Row " +str(j))
-    robot = Agent(radius_coarse, L, T, radius_detection,w, theta_mu, theta_mean_beta, theta_sd_beta)
-    targets = np.loadtxt('target_large.csv', delimiter=',')
-    target_location = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
-    env = Enviroment(L, target_location)
-    # np.mean([robot.sample_step_length(3) for i in range(1000)])
-    # test iteration
-
-    while robot.t != robot.T:
-        pos_x = robot.pos_x
-        pos_y = robot.pos_y
-        feature_vector = robot.feature_vector(pos_x, pos_y)
-        mu = robot.sample_parameter(feature_vector)
-        l = robot.sample_step_length(mu)
-        beta_i, beta_mean, beta_sd = robot.sample_angle(feature_vector)
-        pos_x_prime, pos_y_prime = robot.next_state(l, beta_i)
-        feature_vector_prime = robot.feature_vector(pos_x_prime, pos_y_prime)
-        reward, cont = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
-        robot.targets_collected+=cont
-        delta = robot.delta(feature_vector, feature_vector_prime, reward)
-        robot.update_w(delta, pos_x, pos_y)
-        robot.update_theta_mu(mu, delta, feature_vector)
-        robot.update_theta_mean_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
-        robot.update_theta_sd_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
-
-        # print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
-        #       "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
-        robot.update_state(pos_x_prime, pos_y_prime)
-
-        # time.sleep(1)
-
-    pos_x = robot.pos_x
-    pos_y = robot.pos_y
-    feature_vector = robot.feature_vector(pos_x, pos_y)
-    mu = robot.sample_parameter(feature_vector)
-    l = robot.sample_step_length(mu)
-    beta_i, beta_mean, beta_sd = robot.sample_angle(feature_vector)
-    pos_x_prime, pos_y_prime = robot.next_state(l, beta_i)
-    reward, cont = env.collected_targets(pos_x_prime, pos_y_prime, radius_detection)
-    robot.targets_collected += cont
-    delta = robot.delta_T(feature_vector, reward)
-    robot.update_w(delta, pos_x, pos_y)
-    robot.update_theta_mu(mu, delta, feature_vector)
-    robot.update_theta_mean_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
-    robot.update_theta_sd_beta(delta, beta_i, beta_mean, beta_sd, feature_vector)
-    # print("From: " +str((pos_x, pos_y))+" to: " + str((pos_x_prime, pos_y_prime)) +
-    #       "\n l : " +str(l) + " beta:  " +str(beta_i) + " mu:" + str(mu) + " Reward: " +str(reward))
-    robot.update_state(pos_x_prime, pos_y_prime)
-    # time.sleep(1)
-    robot.save_weights()
-
-    return robot.targets_collected
-
-def learning_simulation(j,N,radius_coarse, L, T, radius_detection):
-
-    initialize_weigths()
-    w, theta_mu, theta_mean_beta, theta_sd_beta=load_weights()
-    learning_rate=np.array([one_episode(radius_coarse, L, T, radius_detection,w, theta_mu, theta_mean_beta, theta_sd_beta,i,j) for i in range(N)])
-
-    return learning_rate
-
-
-def learning_table(M,N,radius_coarse, L, T, radius_detection):
-
-    learning_table=np.zeros((M,N))
-
-    for j in range(M):
-
-        learning_table[j,:]=learning_simulation(j,N, radius_coarse, L, T, radius_detection)
-
-
 #Initialization values
+
+
+def simulation(targets,target_location, data_weights,N_episodes,radius_coarse, L, T, radius_detection):
+
+    #parameters of simulation
+    #number of episodes
+    #initialize agent
+    #Each episode we save the weights
+
+    if not data_weights:
+
+        initialize_weigths()
+
+    w, theta_mu, theta_mean_beta, theta_sd_beta=load_weights()
+
+    agent=Agent(radius_coarse, L, T,radius_detection,w, theta_mu, theta_mean_beta, theta_sd_beta)
+    target_list=[]
+
+    set_weights=[1000,2000,3000,4000,5000]
+
+    for n in range(N_episodes):
+
+        output=print("collection " + str(agent.one_episode(L,target_location)))
+        target_list.append(output)
+        # agent.plot_path(targets)
+        agent.reset_agent()
+
+        if n in set_weights:
+
+            w_name="w_"+str(n)+".csv"
+            theta_mu_name="theta_mu_"+str(n)+".csv"
+            theta_sd_beta_name="theta_mean_beta_"+str(n)+".csv"
+            theta_mean_beta_name="theta_sd_beta_"+str(n)+".csv"
+
+            np.savetxt(w_name, agent.w, delimiter=',')
+            np.savetxt(theta_mu_name, agent.theta_mu, delimiter=',')
+            np.savetxt(theta_sd_beta_name, agent.theta_mean_beta, delimiter=',')
+            np.savetxt(theta_mean_beta_name, agent.theta_sd_beta, delimiter=',')
+
+    pass
+
+    #initialize enviroment for each episode
+
+
+
+def plot_learning_curve():
+
+    average=np.mean(learning_table, axis=0)
+    batches=average[np.arange(0,5000,50)]
+
+    batches=[np.mean(average[(i*50):(i*50)+50], axis=0) for i in range(100)]
+    xx=[50*i for i in range(100)]
+    x=np.arange(0,5000,50)
+    batches[np.argmax(batches)]=3
+    plt.plot(xx,batches, color='#65C7F5')
+    # plt.plot(x, batches, color='#65C7F5')
+    plt.xlabel("Episode")
+    plt.ylabel("Average Targets collected")
+    plt.title("Learning Curve")
+    plt.show()
+
+def plot_coarse_coding():
+    targets = np.loadtxt('target_large.csv', delimiter=',')
+    x_t=targets[:,0]
+    y_t=targets[:,1]
+
+
+    check_points= np.array([[2000,3000], [3000,7000], [4000,6000],[7000,4000],[9000,6000],[6000,8000],[9000,9000],[8000,2000],[1000,4000]])
+
+    mark=np.array([[4000,6000]])
+
+    ax = plt.gca()
+    ax.set_xlim((0, 10000))
+    ax.set_ylim((0, 10000))
+
+    ax.plot(mark[:,0], mark[:,1],marker='*', color="black")
+    # ax.plot(mark[:, 0], mark[:, 1], "ok", color="blue")
+    ax.plot(x_t, y_t, "ok", label="input point", color="red")
+
+    coarse_centers = 1000 * np.arange(0, 11, 1)
+    centers = list(itertools.product(coarse_centers, coarse_centers))
+
+    for c in centers:
+        circle2 = plt.Circle(c, 2500, color='g', fill=False)
+        ax.add_patch(circle2)
+    # #     # plt.legend()
+    # #     # plt.colorbar()
+    # #     # plt.axis("equal")
+    plt.show()
+    # #
+#
+#
+# w, theta_mu, theta_mean_beta, theta_sd_beta=load_weights()
+#
+# check_points = np.array([[2000, 3000], [3000, 7000], [4000, 6000], [7000, 4000], [9000, 6000], [6000, 8000], [9000, 9000], [8000, 2000],
+#      [1000, 4000]])
+
+
+# w, theta_mu, theta_mean_beta, theta_sd_beta=load_weights()
+# n_targets = []
+# radius_coarse = 750
+# L = 10000
+# T = 50000
+# radius_detection = 25
+# N = 5000
+# M = 1
+# robot = Agent(radius_coarse, L, T, radius_detection, w, theta_mu, theta_mean_beta, theta_sd_beta)
+# robot.t=1
+
+
 
 if __name__ == "__main__":
 
+    #Parameter of simulation
 
-    n_targets=[]
-    radius_coarse=800
+    radius_coarse=750
     L=10000
-    T=1000
+    T=5000
     radius_detection=25
-    N=250
-    M=10
+    N_episodes=1000
 
-    learning_table=learning_table(M,N,radius_coarse, L, T, radius_detection)
+    data_weights=False
 
-    #Learning block
+    w, theta_mu, theta_mean_beta, theta_sd_beta=load_weights()
+    agente=Agent(radius_coarse, L, T, radius_detection, w, theta_mu, theta_mean_beta, theta_sd_beta)
+
+    targets = np.loadtxt('target_large.csv', delimiter=',')
+    target_location = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
+
+    simulation(targets,target_location, data_weights, N_episodes, radius_coarse, L, T, radius_detection)
 
 
-average=np.mean(learning_table, axis=0)
-x=np.arange(0,250)
-plt.plot(x,average, '--o', color='#65C7F5')
-plt.show()
 
-# plot path
-# targets = np.loadtxt('target_large.csv', delimiter=',')
-# robot.plot_path(targets)
-
-# x_t=targets[:,0]
-# y_t=targets[:,1]
-#
-#
-# def plot_heat_map():
-#
-#     rng = np.random.default_rng()
-#     x = 10000 *np.random.uniform(0,1,2000)
-#     y = 10000 *np.random.uniform(0,1,2000)
-#     z=[a1.probability_actions(vector_x[i], vector_y[i]) for i in range(2000)]
-#     X = np.linspace(min(x), max(x))
-#     Y = np.linspace(min(y), max(y))
-#     X, Y = np.meshgrid(X, Y)  # 2D grid for interpolation
-#     interp = NearestNDInterpolator(list(zip(x, y)), z)
-#     Z = interp(X, Y)
-#     plt.pcolormesh(X, Y, Z, shading='auto')
-#     plt.plot(x_t, y_t, "ok", label="input point", color="red")
-#     # plt.legend()
-#     # plt.colorbar()
-#     # plt.axis("equal")
-#     plt.show()
-#
