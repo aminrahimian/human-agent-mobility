@@ -12,6 +12,7 @@ from scipy.stats import pareto
 from scipy.stats import expon
 from scipy.interpolate import NearestNDInterpolator
 import random
+from scipy.stats import uniform
 
 
 # generate targets.
@@ -92,7 +93,54 @@ class Agent:
         self.triplet_obs_states=[]
 
 
-    # def action_epsilon_greedy(self,pos_x, pos_y):
+    def mu_epsilon_greedy(self,pos_x, pos_y):
+
+        index_x=int(np.floor(pos_x/self.a))
+        index_y=int(np.floor(pos_y/self.a))
+
+        self.table[index_x,index_y]
+
+        if uniform.rvs()>self.epsilon:
+
+            mu=np.argmax(self.table[index_x,index_y,:]) + 2
+
+        else:
+
+            mu=np.random.choice(2,1)[0] +2
+
+        return  mu
+
+
+    def sample_step_length(self, mu):
+
+        alpha = mu - 1
+        V = np.random.uniform(-np.pi * 0.5, 0.5 * np.pi, 1)[0]
+        W = expon.rvs(size=1)[0]
+        cop1 = (np.sin(alpha * V)) / ((np.cos(V)) ** (1 / alpha))
+        cop2 = ((np.cos((1 - alpha) * V)) / W) ** (((1 - alpha) / alpha))
+        elle = cop1 * cop2
+
+        if elle <= 0:
+
+            elle = 10 * min(500, -1 * elle)
+            step_l = max(25, elle)
+
+        else:
+
+            elle = 10 * min(500, elle)
+            step_l = max(25, elle)
+
+        # print("Taking this value:  " + str(elle))
+
+        # angle = np.random.uniform(0, 2 * np.pi, 1)[0]
+        # print("angle vel :" + str(angle))
+        # vel_x = 10*elle * np.cos(angle)
+        # vel_y = 10*elle * np.sin(angle)
+
+        return step_l
+
+
+
 
 
 
