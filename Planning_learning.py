@@ -67,8 +67,35 @@ class Enviroment:
 
         return (R, cont)
 
-    def reset_enviroment(self):
+    def reset_enviroment(self,target_location):
 
-        self.L = L
         self.target_location = target_location
         self.cont_prev = 0
+
+
+
+class Agent:
+
+    def __int__(self,L,T,radius_detection):
+
+        self.L = L
+        self.T = T
+        self.pos_x = L / 2
+        self.pos_y = L / 2
+        self.radius_detection = radius_detection
+        self.a = np.sqrt(2)*self.radius_detection
+        self.dim_table = int(np.ceil(self.L/self.a))
+        self.table = np.ones((self.dim_table,self.dim_table,2))
+        self.table[:, :, 0] = self.table[:, :, 0] * 0.11
+        self.table[:, :, 1] = self.table[:, :, 1] * 0.10
+        self.alpha=0.01
+        self.triplet_obs_states=[]
+
+
+    # def action_epsilon_greedy(self,pos_x, pos_y):
+
+
+
+
+H=np.ones((4,4,2))
+
