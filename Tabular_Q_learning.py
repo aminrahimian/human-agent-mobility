@@ -12,6 +12,7 @@ from scipy.stats import pareto
 from scipy.stats import expon
 from scipy.interpolate import NearestNDInterpolator
 
+
 class Enviroment:
 
     def __init__(self, targets_coord):
@@ -60,7 +61,7 @@ class Enviroment:
         if cont > 0:
 
             R=100*cont
-            print("Reward  : " + str(R))
+            # print("Reward  : " + str(R))
 
         else:
 
@@ -68,28 +69,30 @@ class Enviroment:
             # print("No targets  -> Reward: " + str(R))
 
 
-        return R
+        return (R, cont)
+
 
 class Agent:
 
-    def __init__(self, T, load_table, simulation):
+    def __init__(self, T, load_table,simulation):
 
         self.L = 10000
         self.pos_x = self.L / 2
         self.pos_y = self.L / 2
-        self.alpha = 0.1
+        self.alpha = 0.9
         self.width_cell = 25
         n_cells = int(np.floor(self.L / self.width_cell))
 
         if load_table:
 
-            self.dict_tabular  = np.loadtxt('weights_SARSA.csv', delimiter=',')
+            with open('table_tabular_1.pickle', 'rb') as handle:
+                self.dict_tabular = pickle.load(handle)
 
         else:
 
             self.dict_tabular = {0: np.zeros((1,2)),
-                                 1: np.zeros((n_cells, n_cells, 2)),
-                                 2: np.zeros((n_cells, n_cells, 2))}
+                                     1: np.zeros((n_cells, n_cells, 2)),
+                                     2: np.zeros((n_cells, n_cells, 2))}
 
         # when simulation
         if simulation:
@@ -114,7 +117,7 @@ class Agent:
         index_x = int(np.floor(pos_x / self.width_cell))
         index_y = int(np.floor(pos_y / self.width_cell))
 
-        print("indices "  +str((index_x, index_y)))
+        # print("indices "  +str((index_x, index_y)))
 
         if not time_step==self.T:
 
@@ -143,7 +146,7 @@ class Agent:
 
         if l <= 0:
 
-            l = 10 * min(500, -l)
+            l = 10 * min(500, -1*l)
             step_l = max(25, l)
 
         else:
@@ -173,7 +176,7 @@ class Agent:
         index_x = int(np.floor(pos_x / self.width_cell))
         index_y = int(np.floor(pos_y / self.width_cell))
 
-        print("indices " + str((index_x, index_y)))
+        # print("indices " + str((index_x, index_y)))
 
         if not self.terminal_state:
 
@@ -189,7 +192,7 @@ class Agent:
 
             q_values=self.dict_tabular[2][index_x, index_y, :]
 
-        print("q values :" +str(q_values))
+        # print("q values :" +str(q_values))
 
         sample_uniform=np.random.uniform(0, 1,1)[0]
 
@@ -226,16 +229,16 @@ class Agent:
         pos_x_prime = pos_x + vel_x
         pos_y_prime = pos_y + vel_y
 
-        if pos_x_prime > self.L:
+        if pos_x_prime >= self.L:
             pos_x_prime = 2 * self.L - pos_x_prime
 
-        if pos_x_prime < 0:
-            self.pos_x_prime = -1 * pos_x_prime
+        if pos_x_prime <= 0:
+            pos_x_prime = -1 * pos_x_prime
 
-        if pos_y_prime > self.L:
+        if pos_y_prime >= self.L:
             pos_y_prime = 2 * self.L - pos_y_prime
 
-        if pos_y_prime < 0:
+        if pos_y_prime <= 0:
             pos_y_prime = -1 * pos_y_prime
 
         return (pos_x_prime, pos_y_prime)
@@ -261,6 +264,9 @@ class Agent:
         self.path_x = []
         self.path_y = []
         self.terminal_state = False
+        with open('table_tabular_1.pickle', 'rb') as handle:
+            self.dict_tabular = pickle.load(handle)
+
 
     def plot_path(self, targets_coord):
 
@@ -285,67 +291,116 @@ class Agent:
         index_y = int(np.floor(pos_y / self.width_cell))
         time_step=self.t
 
-        if not time_step==self.T:
+        if self.t == 0:
 
-            if self.t == 0:
+            # print("for state and action " + str((index_x, index_y, a)) + " prev q value: " + str(self.dict_tabular[0][0][a]))
 
-                print("for state and action " + str((index_x, index_y, a)) + " prev q value: " + str(self.dict_tabular[0][0][a]))
+            self.dict_tabular[0][0][a]+=self.alpha*(reward+max(self.q_values(pos_x_prime, pos_y_prime,(time_step+1))) -self.dict_tabular[0][0][a])
 
-                self.dict_tabular[0][0][a]=self.dict_tabular[0][0][a]+self.alpha*(reward+max(self.q_values(pos_x_prime, pos_y_prime,(time_step+1))) -self.dict_tabular[0][0][a])
-
-                print("for state and action " + str((index_x, index_y, a)) + " updated q value: " + str(
-                    self.dict_tabular[0][0][a]))
-
-            else:
-
-                print("for state and action " + str((index_x, index_y, a)) + " prev q value: " + str(
-                    self.dict_tabular[1][index_x, index_y,a]))
-
-                self.dict_tabular[1][index_x, index_y,a]=self.dict_tabular[1][index_x, index_y,a]+ \
-                                                         self.alpha * (reward + max(self.q_values(pos_x_prime, pos_y_prime,(time_step+1))) -
-                                                                       self.dict_tabular[1][index_x, index_y,a])
-
-                print("for state and action " + str((index_x, index_y, a)) + " updated q value: " + str(
-                    self.dict_tabular[1][index_x, index_y, a]))
-
+            # print("for state and action " + str((index_x, index_y, a)) + " updated q value: " + str(
+            #     self.dict_tabular[0][0][a]))
 
         else:
+            #
+            # print("for state and action " + str((index_x, index_y, a)) + " prev q value: " + str(
+            #     self.dict_tabular[1][index_x, index_y,a]))
 
-            print("for state and action " + str((index_x, index_y, a)) + " prev q value: " + str(
-                self.dict_tabular[2][index_x, index_y, a]))
+            self.dict_tabular[1][index_x, index_y,a]+= \
+                                                     self.alpha * (reward + max(self.q_values(pos_x_prime, pos_y_prime,(time_step+1))) -
+                                                                   self.dict_tabular[1][index_x, index_y,a])
 
-            self.dict_tabular[2][index_x, index_y, a] = self.dict_tabular[2][index_x, index_y, a] + \
-                                                        self.alpha * (reward  -self.dict_tabular[2][index_x, index_y, a])
+            # print("for state and action " + str((index_x, index_y, a)) + " updated q value: " + str(
+            #     self.dict_tabular[1][index_x, index_y, a]))
+            #
 
-            print("for state and action " + str((index_x, index_y, a)) + " updated q value: " + str(
-                self.dict_tabular[2][index_x, index_y, a]))
-
-
-
-
-
-load_table=False
-simulation=True
-agent=Agent(1000,load_table, simulation)
-
-np.argmax(agent.dict_tabular[0])
 
 # agent.q_value(500, 500, 1)
 
-for n in range(10):
 
-    pos_x = agent.pos_x
-    pos_y = agent.pos_y
-    print("pos agent  " + str((pos_x, pos_y)) + "time : "  +str(agent.t))
-    action = agent.epsilon_greedy_policy( pos_x, pos_y)
-    print("action  " + str(action))
-    pos_x_prime, pos_y_prime=agent.next_position(action, pos_x, pos_y)
-    reward=-10
-    agent.update_tabular_q_values(pos_x,pos_y,pos_x_prime,pos_y_prime,action,reward)
-    time.sleep(4)
-    agent.update_agent_state(pos_x_prime, pos_y_prime)
-    print("-----------------------------------------------")
+simulation = True
+load_table= False
+agent = Agent(1000,load_table, simulation)
+
+# start_time = time.time()
+
+# table_learning=np.zeros((30,500))
+#
+# for row in range(30):
+#
+#     learning = []
+for iteration in range(100):
+
+    print("Episode " + str(iteration))
+    targets = np.loadtxt('target_large.csv', delimiter=',')
+    targets_coord = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
+    e1 = Enviroment(targets_coord)
+    rr=0
+
+    while not agent.t == agent.T:
+
+        pos_x = agent.pos_x
+        pos_y = agent.pos_y
+        # print("pos agent  " + str((pos_x, pos_y)) + "time : "  +str(agent.t))
+        action = agent.epsilon_greedy_policy( pos_x, pos_y)
+        # print("action  " + str(action))
+        pos_x_prime, pos_y_prime=agent.next_position(action, pos_x, pos_y)
+        reward,cont=e1.collected_targets(pos_x_prime, pos_y_prime, agent.radius_detection)
+        rr+=cont
+        agent.update_tabular_q_values(pos_x,pos_y,pos_x_prime,pos_y_prime,action,reward)
+        # time.sleep(0.5)
+        agent.update_agent_state(pos_x_prime, pos_y_prime)
+        #
+        # print("-----------------------------------------------")
+
+    # learning.append(rr)
+    with open('table_tabular_1.pickle', 'wb') as handle:
+        pickle.dump(agent.dict_tabular, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    agent.reset_agent()
+# end_time = time.time()
+# print("total time taken this loop: ", end_time - start_time)
+
+    # table_learning[row,:]=learning
+#
+# with open('learning_table_1.pickle', 'wb') as handle:
+#     pickle.dump(table_learning, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open('table_tabular_1.pickle', 'rb') as handle:
+    dict_tabular = pickle.load(handle)
 
 
 
-np.sum(agent.dict_tabular[1][:,:,0]<0)
+mu_2=dict_tabular[1][:,:,0]
+mu_3=dict_tabular[1][:,:,1]
+diff=np.array(mu_3<mu_2, dtype=float)
+# targets = np.loadtxt('target_large.csv', delimiter=',')
+# plt.plot(targets[:, 0], targets[:, 1], '*')
+plt.imshow(diff, interpolation='none')
+plt.colorbar()
+plt.show()
+
+def plot_trial():
+    with open('learning_table_1.pickle', 'rb') as handle:
+        matrix_learning1 = pickle.load(handle)
+
+    with open('learning_table_5.pickle', 'rb') as handle:
+        matrix_learning5 = pickle.load(handle)
+
+    with open('learning_table_9.pickle', 'rb') as handle:
+        matrix_learning9 = pickle.load(handle)
+
+
+    y1 = np.mean(matrix_learning1, axis=0)
+    x1 = np.arange(0, 100, 1)
+
+    y5 = np.mean(matrix_learning5, axis=0)
+    y9 = np.mean(matrix_learning9, axis=0)
+
+    plt.plot(x1, y1, "-o")
+    plt.plot(x1, y5, "-o")
+    plt.plot(x1, y9, "-o")
+    plt.show()
+
+
+# with open('table_tabular_1.pickle', 'rb') as handle:
+#     dict_tabular = pickle.load(handle)
