@@ -88,6 +88,7 @@ class Agent:
         self.a = np.sqrt(2)*self.radius_detection
         self.dim_table = int(np.ceil(self.L/self.a))
         self.alpha=0.01
+        self.epsilon=0.1
 
         # be careful with this parameter
         amplitude = np.arange(1,10)
@@ -110,9 +111,21 @@ class Agent:
 
     def epsilon_greedy_action(self,pos_x, pos_y):
 
+        index_x = int(np.floor(pos_x / self.a))
+        index_y = int(np.floor(pos_y / self.a))
+
+        treshold=uniform.rvs(0,1)
+
+        if treshold>=self.epsilon:
+
+            index_z=np.argmax(self.table[index_x, index_y,:])
+
+        else:
+
+            index_z=np.random.choice(len(self.flat_list), 1)[0]
 
 
-        pass
+        return index_z
 
 
 
