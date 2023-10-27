@@ -15,6 +15,7 @@ import random
 from scipy.stats import uniform
 from itertools import product
 import networkx as nx
+from random import sample
 
 # generate targets.
 class Enviroment:
@@ -61,6 +62,7 @@ class Enviroment:
 
         if cont>0:
 
+            print("Find a target at Location " +str(pos_x, pos_y))
             R=10*cont
 
         else:
@@ -75,7 +77,6 @@ class Enviroment:
         self.cont_prev = 0
 
 
-
 class Agent:
 
     def __init__(self,L,T,radius_detection):
@@ -87,7 +88,7 @@ class Agent:
         self.radius_detection = radius_detection
         self.a = np.sqrt(2)*self.radius_detection
         self.dim_table = int(np.ceil(self.L/self.a))
-        self.alpha=0.01
+        self.alpha=0.1
         self.epsilon=0.1
         self.t=0
         self.n_planning=10
@@ -114,7 +115,7 @@ class Agent:
                     np.arange(self.dim_table),
                             np.arange(dim_z)))
 
-        values = [(0, 0)] * len(keys)
+        values = [(0, 0,0)] * len(keys)
         self.model= dict(zip(keys, values))
 
         self.keys_sample = list(product(np.arange(self.dim_table),
@@ -145,7 +146,7 @@ class Agent:
 
     def take_action(self,  triplet_index):
 
-        self.sample_dict[(triplet_index[0],triplet_index[1])].append(triplet_index[2])
+        self.sample_dict[(triplet_index[0],triplet_index[1])]=self.sample_dict[(triplet_index[0],triplet_index[1])]+ [triplet_index[2]]
         self.visite_states.append((triplet_index[0],triplet_index[1]))
         delta_x=self.flat_list[triplet_index[2]][0]
         delta_y=self.flat_list[triplet_index[2]][1]
@@ -181,15 +182,19 @@ class Agent:
         self.pos_y=new_pos_y
         self.t+=1
 
-    def update_q_values(self,triple_index, new_pos_x, new_pos_y, reward):
+    def update_q_values(self,triplet_index, new_pos_x, new_pos_y, reward):
 
         index_x_prime = int(np.floor(new_pos_x / self.a))
         index_y_prime = int(np.floor(new_pos_y / self.a))
 
-        self.table[triple_index[0],triple_index[1], triple_index[2]]=\
-            self.table[triple_index[0],triple_index[1], triple_index[2]]+\
+        print("Previous value: " +  str(self.table[triplet_index[0],triplet_index[1], triplet_index[2]] ))
+        self.table[triplet_index[0],triplet_index[1], triplet_index[2]]=\
+            self.table[triplet_index[0],triplet_index[1], triplet_index[2]]+\
             self.alpha*(reward+max(self.table[index_x_prime, index_y_prime,:])-
-                        self.table[triple_index[0], triple_index[1], triple_index[2]] )
+                        self.table[triplet_index[0], triplet_index[1], triplet_index[2]] )
+
+        print("Updated value :" + str(self.table[triplet_index[0],triplet_index[1], triplet_index[2]] ))
+
 
     def update_model(self, triple_index, new_pos_x, new_pos_y, reward):
 
@@ -201,12 +206,28 @@ class Agent:
 
     def simulate_n_steps(self):
 
-        for _ in range(self.n_planning):
+        for k in range(self.n_planning):
 
-            state= np.random.choice(self.visite_states, 1)[0]
-            action= np.random.choice(self.sample_dict[state], 1)[0]
+            print(str(k))
+            print("Visited states: "  +str(self.visite_states))
+            state= sample(self.visite_states, 1)[0]
+            print("Sample state: " + str(state))
+            action= sample(self.sample_dict[state], 1)[0]
+            print("Chosen actions " + str(self.sample_dict[state]))
+            print("sample action" +str(action))
 
-            reward,next_state=self.model[(state[0], state[1], action)]
+
+
+            reward,next_state_x, next_state_y=self.model[(state[0], state[1], action)]
+
+            print("Previous q value : " +str(self.table[state[0], state[1], action]))
+
+            self.table[state[0], state[1], action] = \
+                self.table[state[0], state[1], action] + \
+                self.alpha * (reward + max(self.table[next_state_x, next_state_y, :]) -
+                              self.table[state[0], state[1], action])
+
+            print("Updated q value : " + str(self.table[state[0], state[1], action]))
 
     def reset_agent(self):
 
@@ -214,38 +235,6 @@ class Agent:
         self.pos_y = L / 2
         self.t = 0
 
-        self.t = 0
-
-        # be careful with this parameter
-        amplitude = np.arange(1, 10)
-        movement_index = []
-
-        for A in amplitude:
-            plus_i = A * np.array([-1, 0, 1])
-            plus_j = A * np.array([-1, 0, 1])
-
-            next_cell = list(product(plus_i, plus_j))
-            next_cell.remove((0, 0))
-
-            movement_index.append(next_cell)
-            self.flat_list = [item for sublist in movement_index for item in sublist]
-
-        dim_z = len(self.flat_list)
-        self.table = np.random.rand(self.dim_table, self.dim_table, dim_z)
-
-        keys = list(product(np.arange(self.dim_table),
-                            np.arange(self.dim_table),
-                            np.arange(dim_z)))
-
-        values = [(0, 0)] * len(keys)
-        self.model = dict(zip(keys, values))
-
-        self.keys_sample = list(product(np.arange(self.dim_table),
-                                        np.arange(self.dim_table)))
-
-        values_sample = [[]] * len(self.keys_sample)
-        self.sample_dict = dict(zip(self.keys_sample, values_sample))
-        self.visite_states = []
 
 
 if __name__ == "__main__":
@@ -255,21 +244,25 @@ if __name__ == "__main__":
     radius_detection=25
     a1=Agent(L,T, radius_detection)
 
+    targets = np.loadtxt('target_large.csv', delimiter=',')
+    target_location = set([(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])])
+
+    enviroment = Enviroment(L, target_location)
 
 
-a=[1,2,3,4,5]
-b=[1,2,3,4,5]
-c=[1,2,3]
+    for _ in range(5000):
+
+        pos_x=a1.pos_x
+        pos_y=a1.pos_y
+        triplet_index=a1.epsilon_greedy_action(pos_x, pos_y)
+        new_pos=a1.take_action(triplet_index)
+        a1.update_state_agent(new_pos[0], new_pos[1])
+        reward, cont = enviroment.collected_targets(new_pos[0], new_pos[1], radius_detection)
+        a1.update_q_values(triplet_index, new_pos[0], new_pos[1], reward)
+        a1.update_model(triplet_index, new_pos[0], new_pos[1], reward)
+        a1.simulate_n_steps()
+
+        time.sleep(3)
 
 
-keys=list(product(a,b,c))
-
-values=[(0,0)]*len(keys)
-
-my_dicty=dict(zip(keys, values))
-my_dicty[(1,1,1)]=(1,2)
-
-
-
-
-np.random.choice(a, 2)
+a1.visite_states
