@@ -13,11 +13,12 @@ from scipy.stats import expon
 from scipy.interpolate import NearestNDInterpolator
 import random
 from scipy.stats import uniform
-
+from itertools import product
+import networkx as nx
 
 # generate targets.
-
 class Enviroment:
+
     def __init__(self, L, target_location):
 
         self.L = L
@@ -77,7 +78,7 @@ class Enviroment:
 
 class Agent:
 
-    def __int__(self,L,T,radius_detection):
+    def __init__(self,L,T,radius_detection):
 
         self.L = L
         self.T = T
@@ -86,64 +87,44 @@ class Agent:
         self.radius_detection = radius_detection
         self.a = np.sqrt(2)*self.radius_detection
         self.dim_table = int(np.ceil(self.L/self.a))
-        self.table = np.ones((self.dim_table,self.dim_table,2))
-        self.table[:, :, 0] = self.table[:, :, 0] * 0.11
-        self.table[:, :, 1] = self.table[:, :, 1] * 0.10
         self.alpha=0.01
-        self.triplet_obs_states=[]
+
+        # be careful with this parameter
+        amplitude = np.arange(1,10)
+        movement_index = []
+
+        for A in amplitude:
+
+            plus_i = A * np.array([-1, 0, 1])
+            plus_j = A * np.array([-1, 0, 1])
+
+            next_cell = list(product(plus_i, plus_j))
+            next_cell.remove((0, 0))
+
+            movement_index.append(next_cell)
+            self.flat_list = [item for sublist in movement_index for item in sublist]
+
+        dim_z = len(self.flat_list)
+        self.table = np.random.rand(self.dim_table, self.dim_table, dim_z)
 
 
-    def mu_epsilon_greedy(self,pos_x, pos_y):
-
-        index_x=int(np.floor(pos_x/self.a))
-        index_y=int(np.floor(pos_y/self.a))
-
-        self.table[index_x,index_y]
-
-        if uniform.rvs()>self.epsilon:
-
-            mu=np.argmax(self.table[index_x,index_y,:]) + 2
-
-        else:
-
-            mu=np.random.choice(2,1)[0] +2
-
-        return  mu
+    def epsilon_greedy_action(self,pos_x, pos_y):
 
 
-    def sample_step_length(self, mu):
 
-        alpha = mu - 1
-        V = np.random.uniform(-np.pi * 0.5, 0.5 * np.pi, 1)[0]
-        W = expon.rvs(size=1)[0]
-        cop1 = (np.sin(alpha * V)) / ((np.cos(V)) ** (1 / alpha))
-        cop2 = ((np.cos((1 - alpha) * V)) / W) ** (((1 - alpha) / alpha))
-        elle = cop1 * cop2
-
-        if elle <= 0:
-
-            elle = 10 * min(500, -1 * elle)
-            step_l = max(25, elle)
-
-        else:
-
-            elle = 10 * min(500, elle)
-            step_l = max(25, elle)
-
-        # print("Taking this value:  " + str(elle))
-
-        # angle = np.random.uniform(0, 2 * np.pi, 1)[0]
-        # print("angle vel :" + str(angle))
-        # vel_x = 10*elle * np.cos(angle)
-        # vel_y = 10*elle * np.sin(angle)
-
-        return step_l
+        pass
 
 
 
 
 
 
+if __name__ == "__main__":
 
-H=np.ones((4,4,2))
+    L=10000
+    T=20
+    radius_detection=25
+    a1=Agent(L,T, radius_detection)
+
+
 
