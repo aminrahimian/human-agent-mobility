@@ -124,11 +124,37 @@ class Agent:
 
             index_z=np.random.choice(len(self.flat_list), 1)[0]
 
+        return (index_x,index_y, index_z)
 
-        return index_z
+    def take_action(self, pos_x, pos_y, triplet_index):
+
+        delta_x=self.flat_list[triplet_index[2]][0]
+        delta_y=self.flat_list[triplet_index[2]][1]
+
+        new_index_x= triplet_index[0] + delta_x
+        new_index_y= triplet_index[1] + delta_y
+
+        if new_index_x<0:
+
+            new_index_x=-1*new_index_x
+
+        if new_index_x>self.dim_table:
+
+            new_index_x=2*self.dim_table-new_index_x
+
+        if new_index_y<0:
+
+            new_index_y = -1 * new_index_y
+
+        if new_index_y > self.dim_table:
+
+            new_index_y = 2*self.dim_table - new_index_y
 
 
+        new_pos_x = self.a * new_index_x
+        new_pos_y=  self.a * new_index_y
 
+        return (new_pos_x, new_pos_y)
 
 
 
