@@ -90,6 +90,7 @@ class Agent:
         self.alpha=0.01
         self.epsilon=0.1
         self.t=0
+        self.n_planning=10
 
         # be careful with this parameter
         amplitude = np.arange(1,10)
@@ -114,8 +115,15 @@ class Agent:
                             np.arange(dim_z)))
 
         values = [(0, 0)] * len(keys)
-
         self.model= dict(zip(keys, values))
+
+        self.keys_sample = list(product(np.arange(self.dim_table),
+                            np.arange(self.dim_table)))
+
+        values_sample = [[]] * len(self.keys_sample)
+        self.sample_dict=dict(zip(self.keys_sample, values_sample))
+        self.visite_states=[]
+
         # my_dicty[(1, 1, 1)] = (1, 2)
 
     def epsilon_greedy_action(self,pos_x, pos_y):
@@ -137,6 +145,8 @@ class Agent:
 
     def take_action(self,  triplet_index):
 
+        self.sample_dict[(triplet_index[0],triplet_index[1])].append(triplet_index[2])
+        self.visite_states.append((triplet_index[0],triplet_index[1]))
         delta_x=self.flat_list[triplet_index[2]][0]
         delta_y=self.flat_list[triplet_index[2]][1]
 
@@ -188,18 +198,54 @@ class Agent:
 
         self.model[triple_index]=(reward, index_x_prime,index_y_prime )
 
+
+    def simulate_n_steps(self):
+
+        for _ in range(self.n_planning):
+
+            state= np.random.choice(self.visite_states, 1)[0]
+            action= np.random.choice(self.sample_dict[state], 1)[0]
+
+            reward,next_state=self.model[(state[0], state[1], action)]
+
     def reset_agent(self):
 
         self.pos_x = L / 2
         self.pos_y = L / 2
         self.t = 0
 
+        self.t = 0
 
+        # be careful with this parameter
+        amplitude = np.arange(1, 10)
+        movement_index = []
 
+        for A in amplitude:
+            plus_i = A * np.array([-1, 0, 1])
+            plus_j = A * np.array([-1, 0, 1])
 
+            next_cell = list(product(plus_i, plus_j))
+            next_cell.remove((0, 0))
 
+            movement_index.append(next_cell)
+            self.flat_list = [item for sublist in movement_index for item in sublist]
 
+        dim_z = len(self.flat_list)
+        self.table = np.random.rand(self.dim_table, self.dim_table, dim_z)
 
+        keys = list(product(np.arange(self.dim_table),
+                            np.arange(self.dim_table),
+                            np.arange(dim_z)))
+
+        values = [(0, 0)] * len(keys)
+        self.model = dict(zip(keys, values))
+
+        self.keys_sample = list(product(np.arange(self.dim_table),
+                                        np.arange(self.dim_table)))
+
+        values_sample = [[]] * len(self.keys_sample)
+        self.sample_dict = dict(zip(self.keys_sample, values_sample))
+        self.visite_states = []
 
 
 if __name__ == "__main__":
@@ -222,3 +268,8 @@ values=[(0,0)]*len(keys)
 
 my_dicty=dict(zip(keys, values))
 my_dicty[(1,1,1)]=(1,2)
+
+
+
+
+np.random.choice(a, 2)
