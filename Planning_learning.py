@@ -89,6 +89,7 @@ class Agent:
         self.dim_table = int(np.ceil(self.L/self.a))
         self.alpha=0.01
         self.epsilon=0.1
+        self.t=0
 
         # be careful with this parameter
         amplitude = np.arange(1,10)
@@ -108,7 +109,6 @@ class Agent:
         dim_z = len(self.flat_list)
         self.table = np.random.rand(self.dim_table, self.dim_table, dim_z)
 
-
     def epsilon_greedy_action(self,pos_x, pos_y):
 
         index_x = int(np.floor(pos_x / self.a))
@@ -126,7 +126,7 @@ class Agent:
 
         return (index_x,index_y, index_z)
 
-    def take_action(self, pos_x, pos_y, triplet_index):
+    def take_action(self,  triplet_index):
 
         delta_x=self.flat_list[triplet_index[2]][0]
         delta_y=self.flat_list[triplet_index[2]][1]
@@ -155,6 +155,31 @@ class Agent:
         new_pos_y=  self.a * new_index_y
 
         return (new_pos_x, new_pos_y)
+
+    def update_state_agent(self, new_pos_x, new_pos_y):
+
+        self.pos_x=new_pos_x
+        self.pos_y=new_pos_y
+        self.t+=1
+
+    def update_q_values(self,triple_index, new_pos_x, new_pos_y, reward):
+
+        index_x_prime = int(np.floor(new_pos_x / self.a))
+        index_y_prime = int(np.floor(new_pos_y / self.a))
+
+        self.table[triple_index[0],triple_index[1], triple_index[2]]=\
+            self.table[triple_index[0],triple_index[1], triple_index[2]]+\
+            self.alpha*(reward+max(self.table[index_x_prime, index_y_prime,:])-
+                        self.table[triple_index[0], triple_index[1], triple_index[2]] )
+
+
+    def reset_agent(self):
+
+        self.pos_x = L / 2
+        self.pos_y = L / 2
+        self.t = 0
+
+
 
 
 
