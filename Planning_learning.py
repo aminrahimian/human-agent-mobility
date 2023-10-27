@@ -109,6 +109,15 @@ class Agent:
         dim_z = len(self.flat_list)
         self.table = np.random.rand(self.dim_table, self.dim_table, dim_z)
 
+        keys = list(product(np.arange(self.dim_table),
+                    np.arange(self.dim_table),
+                            np.arange(dim_z)))
+
+        values = [(0, 0)] * len(keys)
+
+        self.model= dict(zip(keys, values))
+        # my_dicty[(1, 1, 1)] = (1, 2)
+
     def epsilon_greedy_action(self,pos_x, pos_y):
 
         index_x = int(np.floor(pos_x / self.a))
@@ -172,12 +181,22 @@ class Agent:
             self.alpha*(reward+max(self.table[index_x_prime, index_y_prime,:])-
                         self.table[triple_index[0], triple_index[1], triple_index[2]] )
 
+    def update_model(self, triple_index, new_pos_x, new_pos_y, reward):
+
+        index_x_prime = int(np.floor(new_pos_x / self.a))
+        index_y_prime = int(np.floor(new_pos_y / self.a))
+
+        self.model[triple_index]=(reward, index_x_prime,index_y_prime )
 
     def reset_agent(self):
 
         self.pos_x = L / 2
         self.pos_y = L / 2
         self.t = 0
+
+
+
+
 
 
 
@@ -192,3 +211,14 @@ if __name__ == "__main__":
 
 
 
+a=[1,2,3,4,5]
+b=[1,2,3,4,5]
+c=[1,2,3]
+
+
+keys=list(product(a,b,c))
+
+values=[(0,0)]*len(keys)
+
+my_dicty=dict(zip(keys, values))
+my_dicty[(1,1,1)]=(1,2)
