@@ -52,36 +52,38 @@ class Enviroment:
         """ Return the number of targets given the historical
         position of the agent
         """
+        target_close=np.array([distance.euclidean((pos_x, pos_y),i) for i in self.target_location])
+        n_targets_detected=np.sum(target_close<= self.radius_detection)
 
-        list_target_location=copy.deepcopy(self.target_location)
-        to_delete = []
+        # list_target_location=copy.deepcopy(self.target_location)
+        # to_delete = []
+        #
+        # for element in list_target_location:
+        #
+        #     segment_length = distance.euclidean((pos_x, pos_y), element)
+        #
+        #     if segment_length <= self.radius_detection:
+        #
+        #         to_delete.append(element)
 
-        for element in list_target_location:
+        #
+        # for i in to_delete:
+        #
+        #     list_target_location.remove(i)
+        #
+        # self.target_location=list_target_location
 
-            segment_length = distance.euclidean((pos_x, pos_y), element)
-
-            if segment_length <= self.radius_detection:
-
-                to_delete.append(element)
-
-
-        for i in to_delete:
-
-            list_target_location.remove(i)
-
-        self.target_location=list_target_location
-
-        if len(to_delete)>0:
+        if n_targets_detected>0:
 
             print(" * * * *  * Find a target at Location " +str((pos_x, pos_y)))
             # time.sleep(5)
-            R=10*len(to_delete)
+            R=n_targets_detected
 
         else:
 
-            R=-1
+            R=0
 
-        return (R, len(to_delete))
+        return (R,n_targets_detected)
 
 
     def reset_enviroment(self,target_location):
@@ -89,47 +91,49 @@ class Enviroment:
         self.target_location = target_location
         self.cont_prev = 0
 
+
 class Agent:
 
     def __init__(self,L,T,radius_detection):
 
         self.L = L
         self.T = T
-        self.pos_x = L / 2
-        self.pos_y = L / 2
+        self.pos_x = []
+        self.pos_y = []
         self.radius_detection = radius_detection
         self.a = np.sqrt(2)*self.radius_detection
-        self.dim_table = int(np.ceil(self.L/self.a))
-        self.alpha=5e-4
+        self.dim_table = (int(np.ceil(self.L/self.a)))
+        self.alpha=0.1
         self.epsilon=0.1
         self.t=0
-        self.n_planning=100
+        self.n_planning=10
+
 
         # be careful with this parameter
-        amplitude = np.arange(1,10)
-        movement_index = []
 
-        for A in amplitude:
+        # list of x and y
 
-            plus_i = A * np.array([-1, 0, 1])
-            plus_j = A * np.array([-1, 0, 1])
+        self.position_nodes=[]
 
-            next_cell = list(product(plus_i, plus_j))
-            next_cell.remove((0, 0))
+        for i in range(self.dim_table):
+            for j in range(self.dim_table):
 
-            movement_index.append(next_cell)
-            self.flat_list = [item for sublist in movement_index for item in sublist]
+                x_i = self.a*i +self.a*0.5
+                y_i = self.a * j + self.a * 0.5
+                self.position_nodes.append((x_i, y_i))
 
-        dim_z = len(self.flat_list)
+
+        loc_center=[distance.euclidean((L/2,L/2),i) for i in self.position_nodes]
+
+        self.current_node=np.argmin(loc_center)
+        self.nodes=np.arange(len(self.position_nodes))
+
         # self.table = np.random.rand(self.dim_table, self.dim_table, dim_z)
-        self.table =np.zeros((self.dim_table, self.dim_table, dim_z))
+        self.table =np.zeros((len(self.position_nodes),len(self.position_nodes)))
 
-        keys = list(product(np.arange(self.dim_table),
-                    np.arange(self.dim_table),
-                            np.arange(dim_z)))
 
-        values = [(0, 0,0)] * len(keys)
-        self.model= dict(zip(keys, values))
+        self.model= []
+        self.enviroment=[]
 
         self.keys_sample = list(product(np.arange(self.dim_table),
                             np.arange(self.dim_table)))
@@ -140,114 +144,118 @@ class Agent:
 
         # my_dicty[(1, 1, 1)] = (1, 2)
 
-    def epsilon_greedy_action(self,pos_x, pos_y):
+    def deterministic_model(self, target_location):
 
-        index_x = int(np.floor(pos_x / self.a))
-        index_y = int(np.floor(pos_y / self.a))
+        new_target_location=[]
+
+        for target in target_location:
+
+            new_x=target[0]+norm.rvs(0,30,1)[0]
+            new_y = target[1] + norm.rvs(0, 30, 1)[0]
+
+            new_target_location.append((new_x,new_y))
+
+        model=[]
+
+        for i in self.nodes:
+
+            distances=np.array([distance.euclidean((self.position_nodes[i][0],self.position_nodes[i][1]),(j[0],j[1])) for j in new_target_location])
+            model.append(np.sum(distances<=self.radius_detection))
+            print("node " +str(i)  + " with targets"+ str(np.sum(distances<=self.radius_detection)))
+
+
+        self.model=model
+
+    def actual_model(self, target_location):
+
+        enviroment=[]
+
+        for i in self.nodes:
+            distances = np.array(
+                [distance.euclidean((self.position_nodes[i][0], self.position_nodes[i][1]), (j[0], j[1])) for j in
+                 target_location])
+            enviroment.append(np.sum(distances <= self.radius_detection))
+
+            print("node actual model " + str(i) + " with targets" + str(np.sum(distances <= self.radius_detection)))
+
+        self.enviroment = enviroment
+
+    def epsilon_greedy_action(self,node):
 
         treshold=uniform.rvs(0,1)
+        self.table[node, node]=-1000
 
         if treshold>=self.epsilon:
 
-            index_z=np.argmax(self.table[index_x, index_y,:])
+            next_node=np.argmax(self.table[node, :])
 
         else:
 
-            index_z=np.random.choice(len(self.flat_list), 1)[0]
+            next_node=np.random.choice(self.nodes)
 
-        return (index_x,index_y, index_z)
+            if next_node==node:
 
-    def take_action(self,  triplet_index):
+                try:
 
-        self.sample_dict[(triplet_index[0],triplet_index[1])]=self.sample_dict[(triplet_index[0],triplet_index[1])]+ [triplet_index[2]]
+                    next_node+=1
 
-        if not (triplet_index[0],triplet_index[1]) in self.visite_states:
+                except:
 
-            self.visite_states.append((triplet_index[0],triplet_index[1]))
+                    next_node-=1
 
+        return next_node
 
-        delta_x=self.flat_list[triplet_index[2]][0]
-        delta_y=self.flat_list[triplet_index[2]][1]
-
-        new_index_x= triplet_index[0] + delta_x
-        new_index_y= triplet_index[1] + delta_y
-
-        if new_index_x<0:
-
-            new_index_x=-1*new_index_x
-
-        if new_index_x>self.dim_table:
-
-            new_index_x=2*self.dim_table-new_index_x
-
-        if new_index_y<0:
-
-            new_index_y = -1 * new_index_y
-
-        if new_index_y > self.dim_table:
-
-            new_index_y = 2*self.dim_table - new_index_y
-
-
-        new_pos_x = self.a * new_index_x
-        new_pos_y=  self.a * new_index_y
-
-        return (new_pos_x, new_pos_y)
-
-    def update_state_agent(self, new_pos_x, new_pos_y):
+    def update_state_agent(self, next_node):
 
         # print("Moving to :"  +str((new_pos_x, new_pos_y)))
 
-        self.pos_x=new_pos_x
-        self.pos_y=new_pos_y
+        self.current_node=next_node
+        self.pos_x.append(self.position_nodes[next_node][0])
+        self.pos_y.append(self.position_nodes[next_node][1])
         self.t+=1
 
-    def update_q_values(self,triplet_index, new_pos_x, new_pos_y, reward):
+    def update_q_values(self,current_node,next_node, reward):
 
-        index_x_prime = int(np.floor(new_pos_x / self.a))
-        index_y_prime = int(np.floor(new_pos_y / self.a))
 
         # print("Previous value: " +  str(self.table[triplet_index[0],triplet_index[1], triplet_index[2]] ))
-        self.table[triplet_index[0],triplet_index[1], triplet_index[2]]=\
-            self.table[triplet_index[0],triplet_index[1], triplet_index[2]]+\
-            self.alpha*(reward+max(self.table[index_x_prime, index_y_prime,:])-
-                        self.table[triplet_index[0], triplet_index[1], triplet_index[2]] )
+        self.table[current_node, next_node]=\
+            self.table[current_node, next_node]+\
+            self.alpha*(reward+max(self.table[next_node,:])-
+                        self.table[current_node, next_node] )
 
         # print("Updated value :" + str(self.table[triplet_index[0],triplet_index[1], triplet_index[2]] ))
 
-    def update_model(self, triple_index, new_pos_x, new_pos_y, reward):
+    def update_model(self, next_node, reward):
 
-        index_x_prime = int(np.floor(new_pos_x / self.a))
-        index_y_prime = int(np.floor(new_pos_y / self.a))
-
-        self.model[triple_index]=(reward, index_x_prime,index_y_prime )
+        self.model[next_node]=reward
 
     def simulate_n_steps(self):
 
         for k in range(self.n_planning):
 
-            # print(str(k))
-            # print("Visited states: "  +str(self.visite_states))
-            state= sample(self.visite_states, 1)[0]
-            # print("Sample state: " + str(state))
-            action= sample(self.sample_dict[state], 1)[0]
-            # print("Chosen actions " + str(self.sample_dict[state]))
-            # print("sample action" +str(action))
-            reward,next_state_x, next_state_y=self.model[(state[0], state[1], action)]
+            print("Simulating planning " + str(k))
 
-            # print("Previous q value : " +str(self.table[state[0], state[1], action]))
+            for t in range(100):
 
-            self.table[state[0], state[1], action] = \
-                self.table[state[0], state[1], action] + \
-                self.alpha * (reward + max(self.table[next_state_x, next_state_y, :]) -
-                              self.table[state[0], state[1], action])
+                current_node = self.current_node
+                next_node = self.epsilon_greedy_action(current_node)
+                # print("Going to " + str((self.position_nodes[next_node][0], self.position_nodes[next_node][1])))
+                reward=self.model[next_node]
 
-            # print("Updated q value : " + str(self.table[state[0], state[1], action]))
+                new_reward = reward * 10 - np.log10(
+                    distance.euclidean((self.position_nodes[current_node][0], self.position_nodes[current_node][1]),
+                                       (self.position_nodes[next_node][0], self.position_nodes[next_node][1])))
 
+                # print("Reward " + str(new_reward))
+                self.update_q_values(current_node, next_node, new_reward)
+                self.update_state_agent(next_node)
+                self.update_model(next_node, reward)
+
+            self.reset_agent()
     def reset_agent(self):
 
-        self.pos_x = L / 2
-        self.pos_y = L / 2
+        loc_center = [distance.euclidean((self.L / 2, self.L / 2), i) for i in self.position_nodes]
+        self.current_node = np.argmin(loc_center)
         self.t = 0
 
     def save_data(self):
@@ -255,7 +263,7 @@ class Agent:
         np.savetxt('./planning_learning_data/visited_states.csv', self.visite_states, delimiter=',')
 
         with open('./planning_learning_data/tabular.pkl', 'wb') as file:
-            pickle.dump(self.model, file)
+            pickle.dump(self.table, file)
 
 
         with open('./planning_learning_data/model.pkl', 'wb') as file:
@@ -287,45 +295,93 @@ if __name__ == "__main__":
     T=20
     radius_detection=25
     a1=Agent(L,T, radius_detection)
+    model_data=True
+    enviroment_data=False
 
-    learning=[]
 
     targets = np.loadtxt('target_large.csv', delimiter=',')
     target_location = [(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])]
-    enviroment = Enviroment(L, target_location, radius_detection)
+
+    if not model_data:
+        a1.deterministic_model(target_location)
+        with open('./planning_learning_data/model.pkl', 'wb') as file:
+            pickle.dump(a1.model, file)
 
 
-    for nn in range(1000):
+    else:
+
+        with open('./planning_learning_data/model.pkl', 'rb') as file:
+            # Call load method to deserialze
+            a1.model = pickle.load(file)
+
+
+
+    if not enviroment_data:
+        a1.actual_model(target_location)
+        with open('./planning_learning_data/model.pkl', 'wb') as file:
+            pickle.dump(a1.enviroment, file)
+
+
+    else:
+
+        with open('./planning_learning_data/model.pkl', 'rb') as file:
+            # Call load method to deserialze
+            a1.enviroment = pickle.load(file)
+
+
+
+    #Ya tenemos modelo
+
+    # for i in a1.nodes:
+    #     for j in a1.nodes:
+    #         try:
+    #             print("Table at " +str((i,j)))
+    #             a1.table[i,j]= -np.log10(np.log10(distance.euclidean(a1.position_nodes[i],a1.position_nodes[j])))
+    #
+    #         except:
+    #
+    #             a1.table[i, j]=-1000
+    #Number of episodes
+
+    for nn in range(100):
 
         targets = np.loadtxt('target_large.csv', delimiter=',')
         target_location = [(targets[i, 0], targets[i, 1]) for i in range(targets.shape[0])]
-        enviroment = Enviroment(L, target_location, radius_detection)
+        # enviroment = Enviroment(L, target_location, radius_detection)
 
         print( "---------episode ---" + str(nn))
 
+        episodic_enviroment=copy.deepcopy(a1.enviroment)
 
         for t in range(5000):
 
-            pos_x=a1.pos_x
-            pos_y=a1.pos_y
-            triplet_index=a1.epsilon_greedy_action(pos_x, pos_y)
-            new_pos=a1.take_action(triplet_index)
-            a1.update_state_agent(new_pos[0], new_pos[1])
-            reward, cont = enviroment.collected_targets(new_pos[0], new_pos[1])
-            a1.update_q_values(triplet_index, new_pos[0], new_pos[1], reward)
-            a1.update_model(triplet_index, new_pos[0], new_pos[1], reward)
-            a1.simulate_n_steps()
-            # time.sleep(1)
+            current_node=a1.current_node
+            next_node=a1.epsilon_greedy_action(current_node)
+            # print("Going to " + str((a1.position_nodes[next_node][0],a1.position_nodes[next_node][1]) ))
+            reward=episodic_enviroment[next_node]
+            episodic_enviroment[next_node]=0
+            new_reward=reward*10-np.log10(distance.euclidean((a1.position_nodes[current_node][0],a1.position_nodes[current_node][1]),
+                                                 (a1.position_nodes[next_node][0],a1.position_nodes[next_node][1])))
 
-        print("targets leftovers " + str(len(enviroment.target_location)))
+            # print("Reward " + str(new_reward))
+            a1.update_q_values(current_node, next_node, new_reward)
+            a1.update_state_agent(next_node)
+            a1.update_model(next_node, reward)
 
-        learning.append(500- len(enviroment.target_location))
+            time.sleep(2)
+
+        print("targets leftovers " + str(np.sum(episodic_enviroment)))
+
         a1.reset_agent()
+        a1.simulate_n_steps()
+
+
+
+        # learning.append(500- len(enviroment.target_location))
+
 
 
     a1.save_data()
 
 
-name_file='./planning_learning_data/learning_' + str(a1.n_planning)+'.csv'
-np.savetxt(name_file, learning, delimiter=',')
 
