@@ -1,0 +1,12 @@
+Programs
+>> Para.m --> Check the effects of parameters on potential function
+>> SelfAssignment.m --> Simulation of several drones performing task self-assignment
+>> SelfAssignment_CheckOptimal.m --> Simulation for a series of target distribution with different number density
+>> SelfAssignment_FindOptimal.m --> Post-process program using to find the optimal combination of parameters
+
+Functions
+>> RandTruncLevyMulti --> sampling values from Levy distribution
+>> RandTruncLevyAlpha --> sampling a single value from Levy distribution
+>> pdf_plotter_new --> plotting normalized PDF
+>> calc_F_alpha_beta.m --> calculate forces between drones
+>> calc_V_alpha_beta.m --> describe the interaction between drones using Lennard-Jones potential
