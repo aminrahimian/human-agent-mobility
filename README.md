@@ -4,7 +4,7 @@
 
 ## Target distribution search task
 
-This section studies provides python scripts to simulate search tasks where the targets follow a parametric distribution and the agent's objective is to maximize targets collected and minimize distance traveled. 
+This section study provides python scripts to simulate search tasks where the targets follow a parametric distribution and the agent's objective is to maximize targets collected and minimize distance traveled. 
 
 ## getting started
 
@@ -14,9 +14,11 @@ This section studies provides python scripts to simulate search tasks where the 
 
 *Depending on the size of the dataset and parameters simulations, user might require access to high performance computing (HPC)*
 
-## simulations execution:
+## RL models for deterministic environment:
 
-### data preprocessing 
+We simulate search tasks where target locations follow a hierarchical distribution and their locations are fixed between search tasks (episodes) but unknown to the agent. 
+
+### MC
 
 User should transform network dataset information to run the simulations:
 
