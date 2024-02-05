@@ -12,13 +12,30 @@ This section study provides python scripts to simulate search tasks where the ta
 
 + Python 3.10
 
-*Depending on the size of the dataset and parameters simulations, user might require access to high performance computing (HPC)*
+*Depending on the size of the dataset and parameters simulations, the user might require access to high-performance computing (HPC)*
 
 ## RL models for deterministic environment:
 
 We simulate search tasks where target locations follow a hierarchical distribution and their locations are fixed between search tasks (episodes) but unknown to the agent. 
 
-### MC
+The following methods were used previously to simulate target search. Although they can be used to learn optimal policies, they have some limitations which are presented here.
+
+### Tabular SARSA & Q-learning methods:
+
+Under tabular methods, each state is represented as an entry of the value function table. In our problem setting, we define states as the location of the agent in the search space; however, we have to discretize the search space such that we can assign an entry for each location of the agent.
+
+
+
+### Planning & learning:
+
+
+
+
+
+### Actor-critic methods:
+
+
+
 
 User should transform network dataset information to run the simulations:
 
