@@ -1,1 +1,11 @@
+Programs
+>> Targets.m --> Assuming that targets distributes as a pattern of hierarchical Gaussian distribution, this program create a target distribution and plot it.
+>> SearchKnownTargets.m --> Model of Optimized varied mu search with known target distribution
+>> CombinedLevySearch.m --> Model of varied mu search with memorizing parameter tm
+>> CombinedLevySearch_Dist.m --> Model of varied mu search based on distance Rm with moving targets
+>> CombinedLevySearch_DistPar.m --> Model of varied mu search based on distance
+>> ParSetAnalysis.m --> analyze ParSet.mat
 
+Functions
+>> RandTruncLevyMulti --> sampling values from Levy distribution
+>> pdf_plotter_new --> plotting normalized PDF

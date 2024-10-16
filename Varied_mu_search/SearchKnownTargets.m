@@ -1,10 +1,10 @@
-% BEST varied mu search?
+% Optimized varied mu search?
 % determine the mu based on known target distribution
 load("TarDistLarge.mat")
-R = 25; % search radius
+R = 200; % R determines the resolution of grid
 Dim = 10000;
 [X,Y] = meshgrid(0:R:Dim,0:R:Dim);
-% the agent goes from the center in the domain [5000k,5000]
+% the agent goes from the center of the domain [5000,5000]
 maxT = 50000;
 xy = zeros(maxT,2);
 xy(1,:) = [5000,5000];
@@ -12,7 +12,7 @@ mu_grid = zeros(size(X,1), size(X,2));
 mu_grid(:,:) = 2;
 % determine at which grid cell the targets located
 for i = 1:numel(tar_x_rec)
-    [row_x, col_x]= find(X <= tar_x_rec(i) & tar_x_rec(i) <= X + R);
+    [row_x, col_x]= find(X <= tar_x_rec(i) & tar_x_rec(i) <= X + R); 
     [row_y, col_y] = find(Y <= tar_y_rec(i) & tar_y_rec(i) <= Y + R);
     if numel(row_y) == 0 || numel(col_x) ==0
         continue
@@ -20,6 +20,7 @@ for i = 1:numel(tar_x_rec)
     mu_grid(row_y(1), col_x(1)) = 1;
 end
 
+% plot the distribution of mu according to the positions of targets
 figure(1)
 h = pcolor(X,Y,mu_grid);
 colormap('gray')
@@ -32,12 +33,13 @@ saveas(gcf, 'mu-distribution.png')
 
 % colormap(flipud(colormap));
 
-%% 
-NumLevy = 50; mu1 = 1; mu2 = 2;
+%% search (Parallel)
+NumLevy = 50; % number of cases with different trajectories
+mu1 = 1; mu2 = 2; 
 maxL = 500; maxT = 50000; R = 25;
 num_det_tar = zeros(NumLevy,1);
 Last_tar_index = zeros(NumLevy,1);
-board = [0,0;Dim,0;Dim,Dim;0,Dim;0,0]; %ZX: boundary
+board = [0,0;Dim,0;Dim,Dim;0,Dim;0,0]; %boundary
 
 parfor k = 1:NumLevy 
     tic

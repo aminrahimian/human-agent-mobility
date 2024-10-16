@@ -1,3 +1,4 @@
+% varied mu search with memorizing parameter tm
 clear;clc;
 % levy search with two mu
 mu1 = 1; mu2 = 2;

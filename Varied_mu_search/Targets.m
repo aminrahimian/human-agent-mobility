@@ -1,4 +1,12 @@
-% generate target distribution
+% generate target distribution as a pattern of hierarchical Gaussian
+% distribution
+
+% Four parameters control the distribution
+% num_patches: number of patches
+% num_tar: number of targets within each patch
+% std_dev: standard deviation of the normal distribution of patches;
+% std_tar: standard deviation of the normal distribution of targets in each patch;
+
 clear;clc;
 
 mean = 5000;
@@ -25,9 +33,9 @@ end
 
 data = [tar_x_rec, tar_y_rec];
 filename = 'target_3.csv';  % Name of the CSV file
-csvwrite(filename, data);
-save('TarDist3.mat','tar_x_rec','tar_y_rec');
-%%
+csvwrite(filename, data); % save as .csv file
+save('TarDist3.mat','tar_x_rec','tar_y_rec'); % save as .mat file
+%% plot target distribution
 load("TarDistLarge.mat")
 scatter(tar_x_rec, tar_y_rec)
 xlb = xlabel('$x$ (m)','interpreter','Latex');
