@@ -14,6 +14,12 @@ This section study provides python scripts to simulate search tasks where the ta
 
 *Depending on the size of the dataset and parameters simulations, the user might require access to high-performance computing (HPC)*
 
+## Collective search with social learning
+### Basic Model
+#### Social learning range
+### Add negtive targets
+#### Repulsive 'force' by detected negative targets
+
 ## RL models for deterministic environment:
 
 We simulate search tasks where target locations follow a hierarchical distribution and their locations are fixed between search tasks (episodes) but unknown to the agent. 
