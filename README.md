@@ -15,9 +15,14 @@ This section study provides python scripts to simulate search tasks where the ta
 *Depending on the size of the dataset and parameters simulations, the user might require access to high-performance computing (HPC)*
 
 ## Collective search with social learning
-### Basic Model
+In our collective search model, agents collaborate to search for targets, which increases efficiency. More details are provided below.
+### Basic model
+Social learning in collective search was first proposed by Bhattacharya and Vicsek[^1] in 2014 and later investigated by Garg et al.[^2][^3]. Based on their work, we modified the model to improve its clarity.
+#### Target distribution
+To generate a heterogeneous target distribution, we manipulated the initial spatial clustering of targets using a power-law distribution growth model. Additionally, we assume that targets do not regenerate after being collected by agents.
 #### Social learning range
 ### Add negtive targets
+#### Target distribution
 #### Repulsive 'force' by detected negative targets
 
 ## RL models for deterministic environment:
@@ -58,4 +63,7 @@ To reduce the number of states, we use approximation methods. The value function
  This is the most recent model used. Here, we plan to use all the previous experiences to improve the learning process. Namely, we plan to modify rewards from the environment to split them into two separate rewards and learn two independent value functions. 
 
 
-
+## Reference
+[^1]: Bhattacharya, K., & Vicsek, T. (2014). Collective foraging in heterogeneous landscapes. Journal of the Royal Society Interface, 11(100), 20140674.
+[^2]: Garg, K., Kello, C. T., & Smaldino, P. E. (2022). Individual exploration and selective social learning: balancing exploration–exploitation trade-offs in collective foraging. Journal of the Royal Society Interface, 19(189), 20210915.
+[^3]: Garg, K., Smaldino, P. E., & Kello, C. T. (2024). Evolution of explorative and exploitative search strategies in collective foraging. Collective Intelligence, 3(1), 26339137241228858.
