@@ -11,7 +11,6 @@ import itertools
 from MainFixTar_VarPatch import target_structure
 import h5py
 
-targets = 10000
 beta = 2
 agents = 10
 mu = 1.1
@@ -20,7 +19,12 @@ alpha = 1e-6
 Rvs = [0.1]
 rhos = [0.2]
 save = True
-num_patches = 20
+
+numtar_per_patch = 500 # number of targets/negative targets per patch
+num_p = 5 # number of patches
+num_np = 35 # number of negative patches
+targets = numtar_per_patch*num_p # number of targets
+neg_targets = numtar_per_patch*num_np # number of negative targets
 
 radius_interaction = [1]
 
@@ -31,14 +35,14 @@ mu_range = [mu]
 alpha_range = [float(alpha)]
 paramlist = list(itertools.product(trees, agents, betas, radius_interaction, mu_range, alpha_range, rhos, Rvs))
 print(paramlist[0])
-input_paras = paramlist[0]
-input_paras = (2500,) + input_paras[1:]
+input_paras = paramlist[0] 
+input_paras = (neg_targets,) + input_paras[1:]
 
-NumTar = 100
-hdf5_filename = '10P_Negative_5Patches.h5'
+NumTar = 100 # number of cases
+hdf5_filename = str(num_p)+'P'+str(num_np)+'NP.h5' # file name
 for i in range(NumTar):
-    [tarx, tary] = target_structure(paramlist[0], num_patches)
-    [Ntarx, Ntary] = target_structure(input_paras, 5)
+    [tarx, tary] = target_structure(paramlist[0], num_p)
+    [Ntarx, Ntary] = target_structure(input_paras, num_np)
     case_id = i
     with h5py.File(hdf5_filename, 'a') as hdf5_file:
         # List all groups
