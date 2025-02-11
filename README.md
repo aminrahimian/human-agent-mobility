@@ -21,9 +21,13 @@ Social learning in collective search was first proposed by Bhattacharya and Vics
 #### Target distribution
 To generate a heterogeneous target distribution, we manipulated the initial spatial clustering of targets using a power-law distribution growth model. Additionally, we assume that targets do not regenerate after being collected by agents.
 #### Social learning range
+After collecting a target, the agent emits a social signal from the location where the target was collected to attract nearby agents. Other agents within a radius of $\rho$ can detect the signal, while those outside this region cannot. The parameter $\rho$ determines the strength of social learning.
+#### Varied $\mu$ search
+Before detecting a target, agents perform a Lévy walk with $\mu = 3$ (exploration). After collecting a target, an agent changes $\mu$ from 3 to 1.1 (exploitation) and maintains this value until it moves out of the region of radius $R$ around the detected target without detecting new targets.
 ### Add negtive targets
 #### Target distribution
 #### Repulsive 'force' by detected negative targets
+#### Perturbation step
 
 ## RL models for deterministic environment:
 
