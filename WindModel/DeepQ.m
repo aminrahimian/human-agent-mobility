@@ -5,12 +5,16 @@ tau = 0.005
 
 discount = 0.95
 
-w1 = 0.3
-w2 = 0.4
-w3 = 0.3
+w1 = 0.4
+w2 = 0.3
+w3 = 0.7
 alpha = 0.5
+beta = 0.4
 %%Construct Q-Table
-[px,py,pvx,pvy]=Plot_vel_vector();
+%[px,py,pvx,pvy]=Plot_vel_vector();
+mainfolder = pwd;
+addpath(mainfolder);
+[pvx,pvy,px,py,~]=vp(fullfile(mainfolder,'OneDrive_1_8-7-2024'),6,[],0); % in pixel per frame
 
 % state = [Dpos(1), Dpos(2), DVel(1), DVel(2), px, py, pvx, pvy]
 stateDim = 6;
@@ -81,6 +85,7 @@ for x_Ep = 1:maxEp
     time = 0
     curr_rew = 0
     totalRewards = 0
+    visitedTargets = [0,0,0,0]
     while (SX ~= 1 && count_step<100)
         time = time + 1
         count_step = count_step + 1
@@ -110,7 +115,7 @@ for x_Ep = 1:maxEp
         for k = 1:4
             targetPositions(k,:) = Tpos{k}
         end
-        totalRewards = computeTotalReward(agentPositions, targetPositions, w1, w2, w3, alpha)
+        totalRewards = computeTotalReward(agentPositions, targetPositions,visitedTargets, DVel, W_x_y,w1, w2, w3, alpha,beta)
         curr_rew = curr_rew + totalRewards
         rewards = curr_rew
         y = dlarray(y)
@@ -1053,7 +1058,7 @@ end
 
 
 
-function totalRewards = computeTotalReward(agentPositions, targetPositions, visitedTargets, w1, w2, w3, alpha)
+function [totalRewards,visitedTargets] = computeTotalReward(agentPositions, targetPositions, visitedTargets, DVel, W_x_y,w1, w2, w3, alpha,beta)
     % Computes rewards for search efficiency with visit tracking.
     % Inputs:
     %   agentPositions  - Nx2 matrix of agent (UAV) positions
@@ -1077,11 +1082,26 @@ function totalRewards = computeTotalReward(agentPositions, targetPositions, visi
         if minDist < proximityThreshold && ~visitedTargets(idx)
             R_i(i) = 100; % Large one-time reward
             visitedTargets(idx) = true; % Mark as visited
-        elseif minDist < proximityThreshold && visitedTargets(idx)
-            R_i(i) = 5; % Small bonus for staying near visited target
+        % elseif minDist < proximityThreshold && visitedTargets(idx)
+        %     R_i(i) = 5; % Small bonus for staying near visited target
         else
             R_i(i) = -minDist; % Encourage moving closer
+
         end
+        % Wind alignment reward (cosine similarity between agent velocity and wind)
+        agentVel = DVel{i};  % Agent's actual velocity vector
+        windVel = W_x_y{i};  % Wind vector at the agent's location
+    
+        if norm(agentVel) > 0 && norm(windVel) > 0
+            cosTheta = dot(agentVel, windVel) / (norm(agentVel) * norm(windVel));
+        else
+            cosTheta = 0;
+        end
+    
+        R_wind(i) = cosTheta;  % Range: -1 (opposite) to +1 (aligned)
+        
+        % Add wind component to R_i
+        R_i(i) = R_i(i) + beta * R_wind(i);  % beta is a tunable weight
     end
 
     %% 2. Compute Centralized Reward (R_centralized)
