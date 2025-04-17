@@ -115,7 +115,7 @@ for x_Ep = 1:maxEp
         for k = 1:4
             targetPositions(k,:) = Tpos{k}
         end
-        totalRewards = computeTotalReward(agentPositions, targetPositions,visitedTargets, DVel, W_x_y,w1, w2, w3, alpha,beta)
+        [totalRewards,visitedTargets] = computeTotalReward(agentPositions, targetPositions,visitedTargets, DVel, W_x_y,w1, w2, w3, alpha,beta)
         curr_rew = curr_rew + totalRewards
         rewards = curr_rew
         y = dlarray(y)
