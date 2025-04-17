@@ -1053,28 +1053,35 @@ end
 
 
 
-function totalRewards = computeTotalReward(agentPositions, targetPositions, w1, w2, w3, alpha)
-    % Computes rewards for search efficiency without direct assignments.
+function totalRewards = computeTotalReward(agentPositions, targetPositions, visitedTargets, w1, w2, w3, alpha)
+    % Computes rewards for search efficiency with visit tracking.
     % Inputs:
     %   agentPositions  - Nx2 matrix of agent (UAV) positions
     %   targetPositions - Mx2 matrix of target positions
+    %   visitedTargets  - 1xM logical array indicating visited targets
     %   w1, w2, w3 - Weights for reward components (coverage, efficiency, separation)
     %   alpha - Scaling factor for centralized reward
     % Output:
     %   totalRewards - Nx1 vector containing total rewards for each agent
 
     N = size(agentPositions, 1); % Number of agents
+    M = size(targetPositions, 1); % Number of targets
+    proximityThreshold = 20; % Distance to consider target reached
 
     %% 1. Compute Individual Rewards (R_i)
-    % Reward based on distance reduction to any nearest target
     R_i = zeros(N, 1); % Initialize individual rewards
     for i = 1:N
-        % Find closest target to the agent
         distances = vecnorm(targetPositions - agentPositions(i, :), 2, 2);
-        minTargetDist = min(distances); 
-        
-        % Reward is negative distance to the closest target
-        R_i(i) = -minTargetDist; % Encourage reaching unexplored areas
+        [minDist, idx] = min(distances);
+
+        if minDist < proximityThreshold && ~visitedTargets(idx)
+            R_i(i) = 100; % Large one-time reward
+            visitedTargets(idx) = true; % Mark as visited
+        elseif minDist < proximityThreshold && visitedTargets(idx)
+            R_i(i) = 5; % Small bonus for staying near visited target
+        else
+            R_i(i) = -minDist; % Encourage moving closer
+        end
     end
 
     %% 2. Compute Centralized Reward (R_centralized)
@@ -1085,19 +1092,10 @@ function totalRewards = computeTotalReward(agentPositions, targetPositions, w1, 
 end
 
 function R_centralized = computeCentralizedReward(agentPositions, targetPositions, w1, w2, w3)
-    % Computes the centralized reward based on search efficiency.
-    % Inputs:
-    %   agentPositions  - Nx2 matrix of agent positions
-    %   targetPositions - Mx2 matrix of target positions
-    %   w1, w2, w3 - Weights for coverage, efficiency, and separation rewards
-    % Output:
-    %   R_centralized - Centralized reward value
-    
     N = size(agentPositions, 1); % Number of agents
     numTargets = size(targetPositions, 1); % Number of targets
-    
+
     %% 1. Coverage Reward: Encourage agents to explore unique areas
-    % We approximate coverage by minimizing the distance between agents
     minDistances = zeros(N, 1);
     for i = 1:N
         distances = vecnorm(agentPositions - agentPositions(i, :), 2, 2);
@@ -1107,22 +1105,20 @@ function R_centralized = computeCentralizedReward(agentPositions, targetPosition
     R_coverage = sum(minDistances); % Encourage spreading out
 
     %% 2. Efficiency Reward: Encourage moving toward unexplored targets
-    % Reward agents for moving closer to the nearest target
     R_efficiency = 0;
     for i = 1:N
         distances = vecnorm(targetPositions - agentPositions(i, :), 2, 2);
         minTargetDist = min(distances);
         R_efficiency = R_efficiency - minTargetDist; % Smaller is better
     end
-    R_efficiency = R_efficiency / N; % Normalize by number of agents
+    R_efficiency = R_efficiency / N; % Normalize
 
-    %% 3. Separation Reward: Avoid redundant searches
-    % Penalize agents that move too close to each other
+    %% 3. Separation Reward: Avoid clustering
     agentDistances = squareform(pdist(agentPositions));
-    agentDistances(agentDistances == 0) = inf; % Ignore self-distances
+    agentDistances(agentDistances == 0) = inf;
     minAgentDistances = min(agentDistances, [], 2);
-    R_separation = -sum(1 ./ (minAgentDistances + 1)); % Encourage spacing out
+    R_separation = -sum(1 ./ (minAgentDistances + 1));
 
-    %% 4. Combine Rewards into Centralized Reward
+    %% Combine
     R_centralized = w1 * R_coverage + w2 * R_efficiency + w3 * R_separation;
 end
