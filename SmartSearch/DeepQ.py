@@ -15,7 +15,7 @@ tau = 0.005
 discount = 0.95
 w1, w2, w3 = 0.3, 0.4, 0.3
 alpha = 0.5
-time_penalty_weight = 1 # expect agents to get close to targets as quickly as possible
+beta = 0.4
 state_dim = 6
 action_dim = 9
 num_agents = 4
@@ -189,17 +189,35 @@ def act(action, time, int_vx, int_vy, wind_v, pos_x, pos_y, px, py, pvx, pvy):
 # The individual reward is based on the distance to the nearest target, while the centralized reward considers coverage, efficiency, and separation.
 # w1, w2, w3, alpha: reward weights and scaling factor
 
-def compute_total_reward(agent_positions, target_positions, w1, w2, w3, alpha, time_step, time_penalty_weight):
+def compute_total_reward(agent_positions, target_positions, visited_targets, dvel, w_x_y, w1, w2, w3, alpha, beta):
     n = agent_positions.shape[0]
     r_i = np.zeros(n)
+    proximity_threshold = 20 # threshold for proximity to targets
     for i in range(n):
-        distances = np.linalg.norm(target_positions - agent_positions[i], axis=1) # compute distances to targets
-        r_i[i] = -np.min(distances) # reward is negative of the minimum distance to any target
-    r_centralized = compute_centralized_reward(agent_positions, target_positions, w1, w2, w3)
-    # Add time penalty
-    time_penalty = time_penalty_weight * time_step # total timesteps
+        distances = np.linalg.norm(target_positions - agent_positions[i], axis=1)
+        min_dist_idx = np.argmin(distances)
+        min_dist = distances[min_dist_idx]
 
-    return r_i + alpha * r_centralized - time_penalty
+        if min_dist < proximity_threshold and not visited_targets[min_dist_idx]:
+            r_i[i] = 100
+            visited_targets[min_dist_idx] = True
+        # elif min_dist < proximity_threshold and visited_targets[min_dist_idx]:
+        #     r_i[i] = 5
+        else:
+            r_i[i] = -min_dist
+
+        # Wind alignment reward
+        agent_vel = dvel[i]
+        wind_vel = w_x_y[i]
+        if np.linalg.norm(agent_vel) > 0 and np.linalg.norm(wind_vel) > 0:
+            cos_theta = np.dot(agent_vel, wind_vel) / (np.linalg.norm(agent_vel) * np.linalg.norm(wind_vel))
+        else:
+            cos_theta = 0
+        r_wind = cos_theta
+        r_i[i] += beta * r_wind
+    r_centralized = compute_centralized_reward(agent_positions, target_positions, w1, w2, w3)
+
+    return r_i + alpha * r_centralized, visited_targets
 
 
 # Compute a shared reward for all agents, considering coverage, efficiency, and separation
@@ -271,6 +289,7 @@ for pos in Dpos:
     wvx = interp_fvx(pos).item()
     wvy = interp_fvy(pos).item()
     W_x_y.append(np.array([wvx, wvy]))
+visited_targets = [False] * len(Tpos)  # Initialize visited targets
 
 #============================================================================================
 #=====================================Training Loop==========================================
@@ -316,7 +335,9 @@ for ep in range(max_episodes):
             actions.append(action)
 
         # Compute rewards
-        total_rewards = compute_total_reward(agent_positions, Tpos, w1, w2, w3, alpha, TotolTime, time_penalty_weight)
+        total_rewards, visited_targets = compute_total_reward(
+            agent_positions, Tpos, visited_targets, DVel, W_x_y, w1, w2, w3, alpha, beta
+        )
         curr_rew += np.sum(total_rewards)
 
         # Store experience
