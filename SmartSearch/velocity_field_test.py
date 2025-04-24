@@ -49,10 +49,14 @@ pv = np.sqrt(pvx**2 + pvy**2)
 # Specify number of bins
 num_bins = 50  # Change this to your desired number of bins
 
-# plt.figure(figsize=(8,6))
-# plt.scatter(px, py, c=pv, cmap='viridis', s=5, alpha=0.5)
-# plt.colorbar()
-# plt.show()
+plt.figure(figsize=(8,6))
+plt.scatter(px, py, c=pv, cmap='viridis', s=5, alpha=0.5)
+plt.colorbar()
+plt.title('Original Flow Field from Particle Data')
+plt.xlabel('X (pixels)')
+plt.ylabel('Y (pixels)')
+plt.savefig('original_flow_field.png')  # Save the figure
+plt.show()
 
 # # Plot PDFs using histograms
 # plt.figure(figsize=(8, 6))
@@ -73,6 +77,7 @@ num_bins = 50  # Change this to your desired number of bins
 # ========================================= interpolation =========================================
 from scipy.interpolate import griddata
 from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import gaussian_filter  # Import Gaussian filter
 
 # Create a new grid to interpolate onto
 grid_x, grid_y = np.mgrid[0:1600:16, 0:1600:16]  # 100x100 grid
@@ -83,14 +88,38 @@ grid_v = np.sqrt(grid_vx**2 + grid_vy**2)
 # Replace NaN values with 0 (correct syntax)
 grid_vx = np.nan_to_num(grid_vx, nan=0.0)  # Fills NaNs with 0
 grid_vy = np.nan_to_num(grid_vy, nan=0.0)
+grid_v = np.nan_to_num(grid_v, nan=0.0)  # Apply to magnitude as well
 
 interp_fn = RegularGridInterpolator((grid_x[:,0], grid_y[0,:]), grid_vx, method='linear')
 # Query multiple points
 points = np.array([800.5, 400.3])  # Shape (N, 2)
 values = interp_fn(points)  # Returns array of interpolated values
 print(values)
-# plt.figure(figsize=(8,6))
-# # plt.imshow(grid_v.T, extent=(0, 1, 0, 1), origin='lower')
-# plt.scatter(grid_x, grid_y, c=grid_v, cmap='viridis', s=5)
-# plt.colorbar()
-# plt.show()
+
+# Plot interpolated velocity magnitude
+vmax = np.nanmax(grid_v)  # Determine the maximum value for consistent colorbar
+vmin = np.nanmin(grid_v)  # Determine the minimum value for consistent colorbar
+
+plt.figure(figsize=(8, 6))
+im = plt.imshow(grid_v.T, extent=(0, 1600, 0, 1600), origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)  # Use vmin and vmax
+plt.title('Interpolated Velocity Magnitude')
+plt.xlabel('X (pixels)')
+plt.ylabel('Y (pixels)')
+# plt.scatter(grid_x, grid_y, c=grid_v, cmap='viridis', s=5, alpha=1)
+plt.colorbar(im)
+plt.savefig('interpolated_velocity_magnitude.png')  # Save the figure
+plt.show()
+
+# Apply the Gaussian filter
+sigma = 3.0  # Adjust this to control the smoothing.  The standard deviation for Gaussian kernel. Typical values are 1-10
+filtered_grid_vx = gaussian_filter(grid_vx, sigma=sigma)
+filtered_grid_vy = gaussian_filter(grid_vy, sigma=sigma)
+filtered_grid_v = np.sqrt(filtered_grid_vx**2 + filtered_grid_vy**2)
+plt.figure(figsize=(8,6))
+im = plt.imshow(filtered_grid_v.T, extent=(0, 1600, 0, 1600), origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)  # Use consistent vmin and vmax
+plt.title(f'Filtered Velocity Magnitude (Gaussian, sigma={sigma})')
+plt.xlabel('X (pixels)')
+plt.ylabel('Y (pixels)')
+plt.colorbar(im)
+plt.savefig(f'gaussian_filtered_velocity_magnitude_sigma_{sigma}.png')  # Save the figure
+plt.show()

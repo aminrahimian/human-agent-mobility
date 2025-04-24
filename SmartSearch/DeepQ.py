@@ -13,7 +13,7 @@ from scipy.interpolate import RegularGridInterpolator
 # Parameters
 tau = 0.005
 discount = 0.95
-w1, w2, w3 = 0.3, 0.4, 0.3
+w1, w2, w3 = 0.4, 0.3, 0.7
 alpha = 0.5
 beta = 0.4
 state_dim = 6
@@ -23,7 +23,7 @@ buffer_size = 100000
 batch_size = 64
 max_episodes = 2000
 max_steps = 500
-constV = 1 # constant speed
+constV = 2 # constant speed
 Dim = 1550
 
 # known target positions
@@ -290,7 +290,8 @@ for pos in Dpos:
     wvy = interp_fvy(pos).item()
     W_x_y.append(np.array([wvx, wvy]))
 visited_targets = [False] * len(Tpos)  # Initialize visited targets
-
+agent_trajectories = [[] for _ in range(num_agents)] # Store trajectories
+episode_rewards = []  # List to store total rewards for each episode
 #============================================================================================
 #=====================================Training Loop==========================================
 #============================================================================================
@@ -304,6 +305,7 @@ for ep in range(max_episodes):
     count_step = 0
     curr_rew = 0
     TotolTime = 0
+    episode_trajectories = [[] for _ in range(num_agents)]  # Reset trajectories for the episode
     while SX != 1 and count_step < max_steps:
         TotolTime += 1
         count_step += 1
@@ -333,6 +335,7 @@ for ep in range(max_episodes):
 
             states.append(state)
             actions.append(action)
+            episode_trajectories[i].append(Dpos[i].copy())  # Store position for each agent
 
         # Compute rewards
         total_rewards, visited_targets = compute_total_reward(
@@ -405,3 +408,11 @@ for ep in range(max_episodes):
     print(f"Episode {ep} took {episode_time:.4f} seconds to run")
     if ep % 10 == 0 and count_step == max_steps:
         print(f"Episode {ep}, Reward: {curr_rew:.2f}") # Prints episode number and total reward every 100 episodes.
+    episode_rewards.append(curr_rew)  # Store the total reward for the episode
+    # Store trajectories for the episode
+    for i in range(num_agents):
+        agent_trajectories[i].append(np.array(episode_trajectories[i]))
+
+# Save trajectories (optional)
+np.save('agent_trajectories.npy', agent_trajectories)
+np.save('episode_rewards.npy', np.array(episode_rewards))  # Save the rewards
