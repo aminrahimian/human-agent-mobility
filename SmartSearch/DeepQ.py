@@ -153,6 +153,8 @@ def act(action, time, int_vx, int_vy, wind_v, pos_x, pos_y, px, py, pvx, pvy):
 
     if action == 9:  # Maintain direction
         angle_deg = np.degrees(np.arctan2(int_vy, int_vx))
+        int_vx = constV * np.cos(np.radians(angle_deg))  # fix the speed and calculate the velocity components
+        int_vy = constV * np.sin(np.radians(angle_deg))
         vx = int_vx + wind_v[0]
         vy = int_vy + wind_v[1]
         x = pos_x + vx # time resolution is 1
@@ -181,7 +183,7 @@ def act(action, time, int_vx, int_vy, wind_v, pos_x, pos_y, px, py, pvx, pvy):
     wvy = interp_fvy([x,y]).item() * wind_scale_fac
     w_dir = np.degrees(np.arctan2(wvy, wvx))
 
-    return x, y, vx, vy, w_dir, action, angle_deg, wvx, wvy
+    return x, y, int_vx, int_vy, w_dir, action, angle_deg, wvx, wvy
 
 #============================================================================================
 #==================================Reward Functions==========================================
