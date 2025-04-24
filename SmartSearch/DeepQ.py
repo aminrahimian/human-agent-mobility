@@ -23,8 +23,10 @@ buffer_size = 100000
 batch_size = 64
 max_episodes = 2000
 max_steps = 500
-constV = 2 # constant speed
+constV = 3 # constant speed
+wind_scale_fac = 1.5
 Dim = 1550
+LowDim = 50
 
 # known target positions
 Tpos = np.array([[1430, 1200], [1000, 800], [500, 400], [200, 1500]])
@@ -171,12 +173,12 @@ def act(action, time, int_vx, int_vy, wind_v, pos_x, pos_y, px, py, pvx, pvy):
         y = pos_y + vy
 
     # Periodic boundary conditions
-    x = Dim + x if x < 0 else (x-Dim) if x > Dim else x
-    y = Dim + y if y < 0 else (y-Dim) if y > Dim else y
+    x = Dim + x - LowDim if x < LowDim else (x-Dim+LowDim) if x > Dim else x
+    y = Dim + y - LowDim if y < LowDim else (y-Dim+LowDim) if y > Dim else y
 
     # Interpolate wind velocity
-    wvx = interp_fvx([x,y]).item()
-    wvy = interp_fvy([x,y]).item()
+    wvx = interp_fvx([x,y]).item() * wind_scale_fac
+    wvy = interp_fvy([x,y]).item() * wind_scale_fac
     w_dir = np.degrees(np.arctan2(wvy, wvx))
 
     return x, y, vx, vy, w_dir, action, angle_deg, wvx, wvy
@@ -286,8 +288,8 @@ Dpos = [np.random.randint(150, 1450, size=2) for _ in range(num_agents)]
 DVel = [np.array([constV, 0]) for _ in range(num_agents)]
 W_x_y = []
 for pos in Dpos:
-    wvx = interp_fvx(pos).item()
-    wvy = interp_fvy(pos).item()
+    wvx = interp_fvx(pos).item() * wind_scale_fac
+    wvy = interp_fvy(pos).item() * wind_scale_fac
     W_x_y.append(np.array([wvx, wvy]))
 visited_targets = [False] * len(Tpos)  # Initialize visited targets
 agent_trajectories = [[] for _ in range(num_agents)] # Store trajectories
@@ -357,10 +359,16 @@ for ep in range(max_episodes):
         # Training
         if len(replay_buffer) >= batch_size:
             minibatch = random.sample(replay_buffer, batch_size) # Samples a batch of experiences from the replay buffer.
-            states_batch = torch.tensor([x[0] for x in minibatch], dtype=torch.float32).to(device)
-            actions_batch = torch.tensor([x[1] for x in minibatch], dtype=torch.float32).to(device)
-            rewards_batch = torch.tensor([np.sum(x[2]) for x in minibatch], dtype=torch.float32).to(device)
-            next_states_batch = torch.tensor([x[3] for x in minibatch], dtype=torch.float32).to(device)
+            # Efficiently prepare data for tensor creation
+            states_array = np.array([x[0] for x in minibatch], dtype=np.float32)
+            actions_array = np.array([x[1] for x in minibatch], dtype=np.float32)
+            rewards_array = np.array([np.sum(x[2]) for x in minibatch], dtype=np.float32)
+            next_states_array = np.array([x[3] for x in minibatch], dtype=np.float32)
+
+            states_batch = torch.tensor(states_array, dtype=torch.float32).to(device)
+            actions_batch = torch.tensor(actions_array, dtype=torch.float32).to(device)
+            rewards_batch = torch.tensor(rewards_array, dtype=torch.float32).to(device)
+            next_states_batch = torch.tensor(next_states_array, dtype=torch.float32).to(device)
 
             # Critic update
             next_actions = []
