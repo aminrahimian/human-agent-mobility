@@ -15,16 +15,15 @@ This section study provides python scripts to simulate search tasks where the ta
 *Depending on the size of the dataset and parameters simulations, the user might require access to high-performance computing (HPC)*
 
 ## Collective search with social learning
-In our collective search model, agents collaborate to search for targets, which increases efficiency. More details are provided below.
-### Basic model
 Social learning in collective search was first proposed by Bhattacharya and Vicsek[^1] in 2014 and later investigated by Garg et al.[^2][^3]. Based on their work, we modified the model to improve its clarity.
-#### Target distribution
+### Target distribution
 To generate a heterogeneous target distribution, we manipulated the initial spatial clustering of targets using a power-law distribution growth model. Additionally, we assume that targets do not regenerate after being collected by agents.
-#### Social learning range
+### Social learning range
 After collecting a target, the agent emits a social signal from the location where the target was collected to attract nearby agents. Other agents within a radius of $\rho$ can detect the signal, while those outside this region cannot. The parameter $\rho$ determines the strength of social learning.
-#### Varied $\mu$ search
-Before detecting a target, agents perform a Lévy walk with $\mu = 3$ (exploration). After collecting a target, an agent changes $\mu$ from 3 to 1.1 (exploitation) and maintains this value until it moves out of the region of radius $R$ around the detected target without detecting new targets.
-
+### Varied $\mu$ search
+Before detecting a target, agents perform a Lévy walk with $\mu = 3$ (exploration). After collecting a target, an agent changes $\mu$ from 1.1 (exploration) to 3 (exploitation) and maintains this value until it moves out of the region of radius $R$ around the detected target without detecting new targets.
+### Negative targets
+Agents not only share information about the location of resources but also communicate potential risks in the area. Based on this, we introduce a negative target, assuming a repulsive step length between agents receiving the social signal and the detected negative target.
 
 ## RL models for deterministic environment:
 
