@@ -62,6 +62,12 @@ To reduce the number of states, we use approximation methods. The value function
 
  This is the most recent model used. Here, we plan to use all the previous experiences to improve the learning process. Namely, we plan to modify rewards from the environment to split them into two separate rewards and learn two independent value functions. 
 
+ ### Multi-Agent Deep Deterministic Policy Gradient
+ Agents are assigned their own actor network for decentralized execution. There is one critic network that takes in all of the states of each agent. It functions as a centralized function to encourage coordination amongst agents. 
+
+ ### Continuous Action Space
+ Agents are using a continuous action space rather than discrete. This allows for the agents to utilize the wind flow and maneuver smmoothly
+
 
 ## Reference
 [^1]: Bhattacharya, K., & Vicsek, T. (2014). Collective foraging in heterogeneous landscapes. Journal of the Royal Society Interface, 11(100), 20140674.
